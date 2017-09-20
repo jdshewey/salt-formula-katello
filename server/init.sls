@@ -1,9 +1,9 @@
 {%- from "katello/map.jinja" import server with context %}
 
 katello_sources:
-  file.managed
-    - name: /etc/yum.repos.d/katello-installer.repo
-    - source:  salt://katello/katello-installer.repo
+  file.managed:
+    - name: /etc/yum.repos.d/katello-install.repo
+    - source:  salt://katello/katello-install.repo
 katello_server_pkgs:
   pkg.installed:
     - names: {{ server.pkgs }}
@@ -56,10 +56,15 @@ katello_server_pkgs:
   {%- endif %}
 {%- endif %}
 katello_answers:
-  file.managed
+  file.managed:
     - name: /etc/foreman-installer/scenarios.d/katello-answers.yaml
     - source:  salt://katello/answers/katello-answers.yaml
     - template: jinja 
+foreman-installer --scenario katello:
+  cmd.run:
+    - require:
+      - file: katello_answers
+{%- if server.ldap is defined %}
 katello_ldap:
   module:
     - run
@@ -78,5 +83,6 @@ katello_ldap:
         ldap_password: {{ server.ldap.pass }}
         groups_base: {{ server.ldap.group_dn | urlencode() }}
         automagic_account_creation: {{ server.ldap.get('automagic_account_creation', 1) }} 
-        usergroup_sync: {{ server.ldap.get('usergroup_sync', 1)
+        usergroup_sync: {{ server.ldap.get('usergroup_sync', 1) }}
+{%- endif %}
 {%- endif %}

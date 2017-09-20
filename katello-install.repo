@@ -20,18 +20,32 @@ enabled = 1
 gpgcheck = 1
 
 [CentOS_7_SCLo]
-baseurl = https://mirrors.kernel.org/centos/7/sclo/x86_64/rh/
+baseurl = https://mirrors.sonic.net/centos/7/sclo/x86_64/sclo/
 sslverify = 1
 name = CentOS 7 SCLo
 enabled = 1
 gpgcheck = 1
 
-[EPEL]
+[epel]
+name=Extra Packages for Enterprise Linux 7 - x86_64
 baseurl = https://mirrors.kernel.org/fedora-epel/7/x86_64/
-sslverify = 1
-name = EPEL
-enabled = 1
-gpgcheck = 0
+enabled=1
+gpgcheck=0
+sslverify=1
+
+[centos-sclo-rh]
+name=CentOS-7 - SCLo rh
+baseurl=https://mirrors.kernel.org/centos/7/sclo/x86_64/rh/
+gpgcheck=0
+enabled=1
+sslverify=1
+
+[centos-sclo-sclo]
+name=CentOS-7 - SCLo sclo
+baseurl=https://mirrors.kernel.org/centos/7/sclo/x86_64/sclo/
+gpgcheck=0
+enabled=1
+sslverify=1
 
 [Foreman]
 baseurl = https://yum.theforeman.org/releases/latest/el7/x86_64/
@@ -48,7 +62,7 @@ enabled = 1
 gpgcheck = 0
 
 [Katello]
-baseurl = https://fedorapeople.org/groups/katello/releases/yum/latest/
+baseurl = https://fedorapeople.org/groups/katello/releases/yum/latest/katello/el7/x86_64/
 sslverify = 1
 name = Katello
 enabled = 1

@@ -8,11 +8,19 @@
 
 --- 
   capsule: 
-    parent_fqdn: <fqdn>
+    parent_fqdn: {{ grains['fqdn'] }}
     certs_tar: 
     pulp_master: true
-    pulp_admin_password: <password>
-    pulp_oauth_effective_user: admin
+{%- if server.pulp_admin_pass is defined %}
+    pulp_admin_password: {{ server.pulp_admin_pass }}
+{%- else %}
+    pulp_admin_password: {{ server.admin_pass }}
+{%- endif %}
+{%- if server.oauth_admin_user is defined %}
+    pulp_oauth_effective_user: {{ server.oauth_admin_user }}
+{%- else %}
+    pulp_oauth_effective_user: {{ server.admin_user }}
+{%- endif %}
     pulp_oauth_key: katello
     pulp_oauth_secret: 
     puppet: false
@@ -26,22 +34,22 @@
     qpid_router_hub_port: "5646"
     qpid_router_agent_addr: "0.0.0.0"
     qpid_router_agent_port: "5647"
-    qpid_router_broker_addr: <fqdn>
+    qpid_router_broker_addr: {{ grains['fqdn'] }}
     qpid_router_broker_port: "5671"
     enable_ostree: false
   certs: 
     log_dir: /var/log/certs
-    node_fqdn: <fqdn>
+    node_fqdn: {{ grains['fqdn'] }}
     generate: true
     regenerate: false
     regenerate_ca: false
     deploy: true
-    ca_common_name: <fqdn>
+    ca_common_name: {{ grains['fqdn'] }}
     country: US
     state: US
-    city: "Washington DC"
-    org: <organization>
-    org_unit: <org unit>
+    city: {{ server.location }}
+    org: {{ server.organization }}
+    org_unit: {{ server.organization }}
     expiration: "7300"
     ca_expiration: "36500"
     server_cert: 
@@ -55,7 +63,7 @@
     default_ca_name: katello-default-ca
     server_ca_name: katello-server-ca
   foreman: 
-    foreman_url: "https://<fqdn>"
+    foreman_url: "https://{{ grains['fqdn'] }}"
     puppetrun: false
     unattended: true
     authentication: true
@@ -64,7 +72,7 @@
     passenger_ruby_package: tfm-rubygem-passenger-native
     plugin_prefix: tfm-rubygem-foreman_
     use_vhost: true
-    servername: <fqdn>
+    servername: {{ grains['fqdn'] }}
     serveraliases: 
       - foreman
     ssl: true
@@ -83,7 +91,7 @@
     db_port: 
     db_database: 
     db_username: foreman
-    db_password: <fqdn>
+    db_password: {{ server.admin_pass }}
     db_sslmode: 
     db_pool: 5
     app_root: /usr/share/foreman
@@ -114,18 +122,26 @@
     keepalive_timeout: 5
     oauth_active: true
     oauth_map_users: false
-    oauth_consumer_key: <oath_key>
-    oauth_consumer_secret: <oath_secret>
+{%- if server.oath_key is defined %}
+    oauth_consumer_key: {{ server.oauth_key }}
+{%- else %}
+    oauth_consumer_key: {{ server.admin_pass }}
+{%- endif %}
+{%- if server.oath_secret is defined %}
+    oauth_consumer_secret: {{ server.oauth_secret }}
+{%- else %}
+    oauth_consumer_secret: {{ server.admin_pass }}
+{%- endif %}
     passenger_prestart: true
     passenger_min_instances: "1"
     passenger_start_timeout: "600"
     admin_username: admin
-    admin_password: <password>
+    admin_password: {{ server.admin_pass }}
     admin_first_name: 
     admin_last_name: 
     admin_email: 
-    initial_organization: <organization>
-    initial_location: <location>
+    initial_organization: {{ server.organization }}
+    initial_location: {{ server.location }}
     ipa_authentication: false
     http_keytab: /etc/httpd/conf/http.keytab
     pam_service: foreman
@@ -182,7 +198,7 @@
     foreman_ssl_cert: /etc/foreman-proxy/foreman_ssl_cert.pem
     foreman_ssl_key: /etc/foreman-proxy/foreman_ssl_key.pem
     trusted_hosts: 
-      - <fqdn>
+      - {{ grains['fqdn'] }}
     ssl_disabled_ciphers: []
     manage_sudoersd: true
     use_sudoersd: true
@@ -207,14 +223,14 @@
     puppetssh_wait: false
     salt_puppetrun_cmd: puppet.run
     puppet_user: root
-    puppet_url: "https://<fqdn>:8140"
+    puppet_url: "https://{{ grains['fqdn'] }}:8140"
     puppet_ssl_ca: /var/lib/puppet/ssl/certs/ca.pem
     puppet_ssl_cert: /var/lib/puppet/ssl/certs/u1devsat01v.identrust.com.pem
     puppet_ssl_key: /var/lib/puppet/ssl/private_keys/u1devsat01v.identrust.com.pem
     puppet_use_environment_api: 
     templates: false
     templates_listen_on: both
-    template_url: "http://<fqdn>:8000"
+    template_url: "http://{{ grains['fqdn'] }}:8000"
     logs: true
     logs_listen_on: https
     tftp: false
@@ -259,12 +275,12 @@
     dns_managed: true
     dns_provider: nsupdate
     dns_interface: eth0
-    dns_zone: <domain>
+    dns_zone: {{ grains['domain'] }}
     dns_reverse: "100.168.192.in-addr.arpa"
     dns_server: "127.0.0.1"
     dns_ttl: "86400"
     dns_tsig_keytab: /etc/foreman-proxy/dns.keytab
-    dns_tsig_principal: "foremanproxy/<fqdn>@<DOMAIN>"
+    dns_tsig_principal: "foremanproxy/{{ grains['fqdn'] }}@{{ grains['domain'].upper() }}"
     dns_forwarders: []
     libvirt_network: default
     libvirt_connection: "qemu:///system"
@@ -279,13 +295,21 @@
     freeipa_remove_dns: true
     keyfile: /etc/rndc.key
     register_in_foreman: true
-    foreman_base_url: "https://<fqdn>"
-    registered_name: <fqdn>
+    foreman_base_url: "https://{{ grains['fqdn'] }}"
+    registered_name: {{ grains['fqdn'] }}
     registered_proxy_url: 
     oauth_effective_user: admin
-    oauth_consumer_key: <oath_key>
-    oauth_consumer_secret: <oath_secret>
-    puppet_use_cache: 
+{%- if server.oath_key is defined %}
+    oauth_consumer_key: {{ server.oauth_key }}
+{%- else %}
+    oauth_consumer_key: {{ server.admin_pass }}
+{%- endif %}
+{%- if server.oath_secret is defined %}
+    oauth_consumer_secret: {{ server.oauth_secret }}
+{%- else %}
+    oauth_consumer_secret: {{ server.admin_pass }}
+{%- endif %}
+   puppet_use_cache: 
   "foreman_proxy::plugin::openscap": false
   "foreman_proxy::plugin::pulp": 
     enabled: true
@@ -293,7 +317,7 @@
     pulpnode_enabled: false
     version: 
     group: 
-    pulp_url: "https://<fqdn>/pulp"
+    pulp_url: "https://{{ grains['fqdn'] }}/pulp"
     pulp_dir: /var/lib/pulp
     pulp_content_dir: /var/lib/pulp/content
     puppet_content_dir: /etc/puppet/environments
@@ -311,8 +335,16 @@
     user: foreman
     group: foreman
     user_groups: foreman
-    oauth_key: <oauth_key>
-    oauth_secret: <oauth_secret>
+{%- if server.oath_key is defined %}
+    oauth_key: {{ server.oauth_key }}
+{%- else %}
+    oauth_key: {{ server.admin_pass }}
+{%- endif %}
+{%- if server.oath_secret is defined %}
+    oauth_secret: {{ server.oauth_secret }}
+{%- else %}
+    oauth_secret: {{ server.admin_pass }}
+{%- endif %}
     post_sync_token: <sync_token>
     num_pulp_workers: "1"
     log_dir: /var/log/foreman/plugins
