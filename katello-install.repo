@@ -95,3 +95,10 @@ sslverify = 1
 name = SaltStack
 enabled = 1
 gpgcheck = 0
+
+[Puppet]
+baseurl = https://yum.puppetlabs.com/puppet/el/7/x86_64/
+sslverify = 1
+name = Puppet
+enabled = 1
+gpgckeck = 0

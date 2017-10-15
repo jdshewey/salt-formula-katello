@@ -60,10 +60,17 @@ katello_answers:
     - name: /etc/foreman-installer/scenarios.d/katello-answers.yaml
     - source:  salt://katello/answers/katello-answers.yaml
     - template: jinja 
+{%- if grains['current_tty'] == undefined %}
 foreman-installer --scenario katello:
   cmd.run:
     - require:
       - file: katello_answers
+{%- else %}
+foreman-installer --scenario katello | tee {{ grains['current_tty'] }}:
+  cmd.run:
+    - require:
+      - file: katello_answers
+{%- endif %}
 {%- if server.ldap is defined %}
 katello_ldap:
   module:
