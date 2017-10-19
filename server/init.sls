@@ -4,6 +4,7 @@ katello_sources:
   file.managed:
     - name: /etc/yum.repos.d/katello-install.repo
     - source:  salt://katello/katello-install.repo
+    - template: jinja
 katello_server_pkgs:
   pkg.installed:
     - names: {{ server.pkgs }}
@@ -60,13 +61,13 @@ katello_answers:
     - name: /etc/foreman-installer/scenarios.d/katello-answers.yaml
     - source:  salt://katello/answers/katello-answers.yaml
     - template: jinja 
-{%- if grains['current_tty'] == undefined %}
+{%- if grains.get('current_tty', None) == None %}
 foreman-installer --scenario katello:
   cmd.run:
     - require:
       - file: katello_answers
 {%- else %}
-foreman-installer --scenario katello | tee {{ grains['current_tty'] }}:
+/bin/bash -c "foreman-installer --scenario katello &> >(tee {{ grains['current_tty'] }})":
   cmd.run:
     - require:
       - file: katello_answers

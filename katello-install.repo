@@ -48,7 +48,13 @@ enabled=1
 sslverify=1
 
 [Foreman]
+{%- if pillar.katello.server.nightly == "true" %}
+baseurl = https://yum.theforeman.org/releases/nightly/el7/x86_64/
+{%- elif pillar.katello.server.rc == "true" %}
+baseurl = https://yum.theforeman.org/releases/1.16/el7/x86_64/
+{%- else %}
 baseurl = https://yum.theforeman.org/releases/latest/el7/x86_64/
+{%- endif %}
 sslverify = 1
 name = Foreman
 enabled = 1
@@ -97,8 +103,8 @@ enabled = 1
 gpgcheck = 0
 
 [Puppet]
-baseurl = https://yum.puppetlabs.com/puppet/el/7/x86_64/
+baseurl = https://yum.puppetlabs.com/el/7Server/PC1/x86_64/
 sslverify = 1
 name = Puppet
-enabled = 1
-gpgckeck = 0
+enabled = 0
+gpgcheck = 0
