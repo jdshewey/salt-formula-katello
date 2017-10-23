@@ -3,11 +3,19 @@
 katello_sources:
   file.managed:
     - name: /etc/yum.repos.d/katello-install.repo
-    - source:  salt://katello/katello-install.repo
+    - source:  salt://katello/files/katello-install.repo
     - template: jinja
+katello_clean_yum:
+  cmd.run:
+    - name: yum -y clean all
+    - require:
+      - file: katello_sources
 katello_server_pkgs:
   pkg.installed:
     - names: {{ server.pkgs }}
+    - require:
+      - file: katello_sources
+      - cmd: katello_clean_yum
 {%- if server.smart_proxies is defined %}
     - pkg: 
   {%- if 'abrt' in server.smart_proxies %}
@@ -59,18 +67,34 @@ katello_server_pkgs:
 katello_answers:
   file.managed:
     - name: /etc/foreman-installer/scenarios.d/katello-answers.yaml
-    - source:  salt://katello/answers/katello-answers.yaml
-    - template: jinja 
+    - source:  salt://katello/files/katello-answers.yaml
+    - template: jinja
 {%- if grains.get('current_tty', None) == None %}
+#Fix for http://projects.theforeman.org/issues/20055
+/opt/theforeman/tfm/root/usr/share/gems/gems/foreman_salt-8.0.2/db/seeds.d/75-salt_seeds.rb:
+  file.managed:
+    - source: salt://katello/files/75-salt_seeds.rb
+    - require:
+       - pkg: katello_server_pkgs    
+katello_monkey_patch_for_bugs_21386_and_21401:
+  cmd.run:
+    - name: sed -i -e 's/puppet-server/puppetserver/g' /usr/share/foreman-installer/modules/puppet/manifests/server/install.pp
+    - require:
+      - file: /opt/theforeman/tfm/root/usr/share/gems/gems/foreman_salt-8.0.2/db/seeds.d/75-salt_seeds.rb
+    - require_in:
+      - cmd: foreman-installer --scenario katello
 foreman-installer --scenario katello:
   cmd.run:
     - require:
       - file: katello_answers
+      - file: katello_sources
 {%- else %}
 /bin/bash -c "foreman-installer --scenario katello &> >(tee {{ grains['current_tty'] }})":
   cmd.run:
     - require:
       - file: katello_answers
+      - file: katello_sources
+      - pkg: katello_server_pkgs
 {%- endif %}
 {%- if server.ldap is defined %}
 katello_ldap:
