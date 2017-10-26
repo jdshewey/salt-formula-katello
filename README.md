@@ -42,6 +42,6 @@ Report bugs at https://github.com/jdshewey/salt-formula-katello/issues
 Contributions are extremely welcome! Please feel free to fork a copy of this formula and choose an issue or milestone to tackle. Once finished, and you are sure it is working, create a pull request for review, and I will do my best to reveiew and merge it as soon as possible.
 
 #  Attribution
-Created by James Shewey
-jdshewey.com
-jdshewey@gmail.com
+Created by James Shewey<br>
+jdshewey.com<br>
+jdshewey@gmail.com<br>
