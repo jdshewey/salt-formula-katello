@@ -19,6 +19,8 @@ katello_server_pkgs:
     - require:
       - file: katello_sources
       - cmd: katello_clean_yum
+    - onchanges: 
+      - cmd: katello_clean_yum
 {%- if server.smart_proxies is defined %}
     - pkg: 
   {%- if 'abrt' in server.smart_proxies %}
@@ -85,6 +87,8 @@ katello_monkey_patch_for_bugs_21386_and_21401:
     - name: sed -i -e 's/puppet-server/puppetserver/g' /usr/share/foreman-installer/modules/puppet/manifests/server/install.pp
     - require:
       - file: /opt/theforeman/tfm/root/usr/share/gems/gems/foreman_salt-8.0.2/db/seeds.d/75-salt_seeds.rb
+    - onchanges:
+      - cmd: katello_clean_yum
 katello_install:
   cmd.run:
 {%- if grains.get('current_tty', None) == None %}
@@ -99,19 +103,27 @@ katello_install:
       - cmd: katello_monkey_patch_for_bugs_21386_and_21401
     - env:
       - LC_CTYPE: en_US.UTF-8
+    - onchanges:
+      - cmd: katello_clean_yum
 katello_reset_pass:
   cmd.run:
     - name: curl -s -k -X PUT -u admin:$( foreman-rake permissions:reset | awk '{print $6}' ) -H "Content-Type:application/json" -H "Accept:application/json" -d '{"login":"admin","current_password":"{{ server.admin_pass }}"}' https://slik01.example.com/api/v2/users/3
     - require:
       - cmd: katello_install
+    - onchanges:
+      - cmd: katello_clean_yum
 mkdir -p /etc/slik:
   cmd.run:
     - require:
       - cmd: katello_reset_pass 
+    - onchanges:
+      - cmd: katello_clean_yum
 touch /etc/slik/installed:
   cmd.run:
     - require:
       - cmd: mkdir -p /etc/slik
+    - onchanges:
+      - cmd: katello_clean_yum
 httpd:
   service.running:
     - enable: true

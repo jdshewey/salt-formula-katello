@@ -44,13 +44,6 @@ gpgcheck=0
 enabled=1
 sslverify=1
 
-[centos-sclo-sclo]
-name=CentOS-7 - SCLo sclo
-baseurl=https://mirrors.kernel.org/centos/7/sclo/x86_64/sclo/
-gpgcheck=0
-enabled=1
-sslverify=1
-
 [Foreman]
 {%- if pillar.katello.server.nightly is defined %}
 {%-   if pillar.katello.server.nightly == True %}

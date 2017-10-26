@@ -36,7 +36,6 @@ import salt.exceptions
         * Add ability to delete OS
         * Revise OS adds
 	* Update media location and org IDs
-	* Investigate possible bug wherein media is updated after OS is created
 '''
 
 
