@@ -24,7 +24,7 @@ enabled = 1
 gpgcheck = 1
 
 [CentOS_7_SCLo]
-baseurl = https://mirrors.sonic.net/centos/7/sclo/x86_64/sclo/
+baseurl = https://mirrors.kernel.org/centos/7/sclo/x86_64/sclo/
 sslverify = 1
 name = CentOS 7 SCLo
 enabled = 1
