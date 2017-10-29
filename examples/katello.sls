@@ -2,12 +2,8 @@ katello:
   server:
     admin_user: admin
     admin_pass: yfQk6pW51Peeu2byWtWh
-<<<<<<< HEAD
-    locations: podunk
-=======
     locations: 
       - podunk
->>>>>>> 6abec7599455dbcdbb68764c534ee024392c76bd
 #    rc: true
 #    nightly: true    
     organizations:
