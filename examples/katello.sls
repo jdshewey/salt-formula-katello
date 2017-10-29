@@ -2,9 +2,10 @@ katello:
   server:
     admin_user: admin
     admin_pass: yfQk6pW51Peeu2byWtWh
-    location: podunk
+    locations: 
+      - podunk
 #    rc: true
-#    nightly: true
+#    nightly: true    
     organizations:
       foobar:
 #        subscription_manifest: manifest_6c20e080-2db6-455f-b340-56eaba3a7d16.zip
