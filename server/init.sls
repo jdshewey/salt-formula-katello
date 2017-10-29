@@ -127,25 +127,3 @@ touch /etc/slik/installed:
 httpd:
   service.running:
     - enable: true
-{%- if server.ldap is defined %}
-katello_ldap:
-  module:
-    - run
-    - name: katello.add_ldap_source
-    - hostname: {{ grains['fqdn']  }}
-    - username: {{ server.admin_user }}
-    - password: {{ server.admin_pass }}
-    - ldap_hostname: {{ server.ldap.source }}
-    - port: 636
-# When is http://projects.theforeman.org/issues/7016 gonna be patched? 
-    - server_type: {{ server.get('server.ldap.type', 'free_ipa') }}
-    - base_dn: {{ server.ldap.base_dn | urlencode() }}
-{%- if server.ldap.type == undefined or server.ldap.type == 'free_ipa' %} 
-    - kwargs: 
-        ldap_user: {{ server.ldap.user }}
-        ldap_password: {{ server.ldap.pass }}
-        groups_base: {{ server.ldap.group_dn | urlencode() }}
-        automagic_account_creation: {{ server.ldap.get('automagic_account_creation', 1) }} 
-        usergroup_sync: {{ server.ldap.get('usergroup_sync', 1) }}
-{%- endif %}
-{%- endif %}

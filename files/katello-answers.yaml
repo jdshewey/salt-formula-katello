@@ -18,9 +18,9 @@
     ca_common_name: {{ grains['fqdn'] }}
     country: US
     state: US
-    city: {{ pillar['katello']['server']['location'] }}
-    org: {{ pillar['katello']['server']['organization'] }}
-    org_unit: {{ pillar['katello']['server']['organization'] }}
+    city: {{ pillar['katello']['server']['locations'][0] }}
+    org: {{ salt['pillar.keys']('katello:server:organizations')[0] }}
+    org_unit: {{ salt['pillar.keys']('katello:server:organizations')[0] }}
     expiration: "7300"
     ca_expiration: "36500"
     server_cert: 
@@ -105,8 +105,8 @@
     admin_first_name: 
     admin_last_name: 
     admin_email: 
-    initial_organization: {{ pillar['katello']['server']['organization'] }}
-    initial_location: {{ pillar['katello']['server']['location'] }}
+    initial_organization: {{ salt['pillar.keys']('katello:server:organizations')[0] }}
+    initial_location: {{ pillar['katello']['server']['locations'][0] }}
     ipa_authentication: false
     http_keytab: /etc/httpd/conf/http.keytab
     pam_service: foreman
