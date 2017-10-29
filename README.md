@@ -24,7 +24,7 @@ will install the latest release candidate of The Foreman's Katello scenario whil
 
 will install the nightly build. These are not recommended, however and are for development, testing and debugging.
 
-##  Reinstalling and existing installs
+###  Reinstalling and existing installs
 
 To reinstall, either `rm /etc/slik/installed` or `yum -y remove katello` which will force a reinstall and cause the formula to reinstall all settings defined in your pillar.
 
