@@ -2,7 +2,7 @@
 
 katello_clean_yum:
   cmd.run:
-    - name: yum -y clean all
+    - name: yum -y clean all || true
     - unless:
       - test -e /etc/slik/installed
       - rpm -qa | egrep "^katello-3\."
@@ -13,8 +13,22 @@ katello_sources:
     - template: jinja
     - onchanges: 
       - cmd: katello_clean_yum
+{%- if grains.get('current_tty', None) != None %}
+katello_display_progress:
+  cmd.run:
+    - name: /bin/bash -c "yum -y install katello  &> >(tee {{ grains['current_tty'] }})"
+    - require:
+      - file: katello_sources
+      - cmd: katello_clean_yum
+    - onchanges:
+      - cmd: katello_clean_yum
+    - require_in:
+      - pkg: katello_server_pkgs
+    - env:
+      - LC_CTYPE: en_US.UTF-8
+{%- endif %}
 katello_server_pkgs:
-  pkg.installed:
+ pkg.installed:
     - names: {{ server.pkgs }}
     - require:
       - file: katello_sources
@@ -82,13 +96,6 @@ katello_answers:
     - source: salt://katello/files/75-salt_seeds.rb
     - require:
        - pkg: katello_server_pkgs    
-katello_monkey_patch_for_bugs_21386_and_21401:
-  cmd.run:
-    - name: sed -i -e 's/puppet-server/puppetserver/g' /usr/share/foreman-installer/modules/puppet/manifests/server/install.pp
-    - require:
-      - file: /opt/theforeman/tfm/root/usr/share/gems/gems/foreman_salt-8.0.2/db/seeds.d/75-salt_seeds.rb
-    - onchanges:
-      - cmd: katello_clean_yum
 katello_install:
   cmd.run:
 {%- if grains.get('current_tty', None) == None %}
@@ -100,7 +107,6 @@ katello_install:
       - file: katello_answers
       - file: katello_sources
       - pkg: katello_server_pkgs
-      - cmd: katello_monkey_patch_for_bugs_21386_and_21401
     - env:
       - LC_CTYPE: en_US.UTF-8
     - onchanges:
@@ -127,3 +133,35 @@ touch /etc/slik/installed:
 httpd:
   service.running:
     - enable: true
+{%- if server.ldap is defined %}
+katello_ldap:
+  module:
+    - run
+    - name: katello.add_ldap_source
+    - hostname: {{ grains['fqdn']  }}
+    - username: {{ server.admin_user }}
+    - password: {{ server.admin_pass }}
+    - ldap_hostname: {{ server.ldap.source }}
+    - port: 636
+# When is http://projects.theforeman.org/issues/7016 gonna be patched?
+    - server_type: {{ server.get('server.ldap.type', 'free_ipa') }}
+    - base_dn: {{ server.ldap.base_dn | urlencode() }}
+{%- if server.ldap.type == undefined or server.ldap.type == 'free_ipa' %}
+    - kwargs:
+        ldap_user: {{ server.ldap.user }}
+        ldap_password: {{ server.ldap.pass }}
+        groups_base: {{ server.ldap.group_dn | urlencode() }}
+        automagic_account_creation: {{ server.ldap.get('automagic_account_creation', 1) }}
+        usergroup_sync: {{ server.ldap.get('usergroup_sync', 1) }}
+{%- endif %}
+{%- endif %}
+{%- if server.organizations is defined %}
+  {%- for org_name, org_data in server.organizations.iteritems() %}
+    {%- if org_data is defined %}
+      {%- for product, repos in server.organizations.iteritems() %}
+        {%- if repos is defined %}
+        {%- endif %}
+      {%- endfor %}
+    {%- endif %}
+  {%- endfor %}
+{%- endif %}
