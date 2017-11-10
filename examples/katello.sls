@@ -9,6 +9,7 @@ katello:
     organizations:
       foobar:
 #        subscription_manifest: manifest_6c20e080-2db6-455f-b340-56eaba3a7d16.zip
+        sync_plan: daily 
         products:
           Katello:
             CentOS 7 Base:

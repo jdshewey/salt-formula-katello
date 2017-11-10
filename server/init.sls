@@ -143,6 +143,13 @@ katello_firewalld:
       - saltstack
       - ssh
       - dhcpv6-client
+
+##################################################
+#
+#    Installation complete; begin configuraion
+#
+##################################################
+
 {%- if server.ldap is defined %}
 katello_ldap:
   module:
@@ -163,14 +170,37 @@ katello_ldap:
         groups_base: {{ server.ldap.group_dn | urlencode() }}
         automagic_account_creation: {{ server.ldap.get('automagic_account_creation', 1) }}
         usergroup_sync: {{ server.ldap.get('usergroup_sync', 1) }}
+    - requires:
+      - firewalld: katello_firewalld
 {%- endif %}
+
+#################################
+#
+#    Configure products/repos
+#
+#################################
+
 {%- endif %}
 {%- if server.organizations is defined %}
   {%- for org_name, org_data in server.organizations.iteritems() %}
+    {%- if org_data.sync_plan is defined %}
+katello_sync_plan_{{ org_name }}:
+  module.run:
+    - katello.create_sync_plan:
+      - hostname: {{ grains['fqdn']  }}
+      - username: {{ server.admin_user }}
+      - password: {{ server.admin_pass }}
+      - organization: {{ org_name }}
+      - frequency: {{ org_data.sync_plan }}
+    - requires:
+      - firewalld: katello_firewalld
+    - onchanges:
+      - cmd: katello_clean_yum
+    {%- endif %}
     {%- if org_data.products is defined %}
-      {%- for product, repos in org_data.products.iteritems() %}
-        {%- if repos is defined %}
-          {%- for repo, info in repos.iteritems() %}
+      {%- for product, prod_info in org_data.products.iteritems() %}
+        {%- if prod_info,repos is defined %}
+          {%- for repo, info in prod_info.repos.iteritems() %}
 katello_gpg_key_{{ product }}_{{ repo }}:
   module.run:
     - katello.load_gpg_key:
@@ -181,10 +211,25 @@ katello_gpg_key_{{ product }}_{{ repo }}:
       - key_url: {{ info.gpg_key }}
     - requires:
       - firewalld: katello_firewalld
+    - require_in:
+      - module: katello_product_{{ product }}
     - onchanges:
       - cmd: katello_clean_yum
           {%- endfor %}
         {%- endif %}
+katello_product_{{ product }}:
+  module.run:
+    - katello.create_product:
+      - hostname: {{ grains['fqdn']  }}
+      - username: {{ server.admin_user }}
+      - password: {{ server.admin_pass }}
+      - organization: {{ org_name }}
+      - product_name: {{ product }}
+      - gpg_key: {{ prod_info.gpg_key }}
+    - requires:
+      - firewalld: katello_firewalld
+    - onchanges:
+      - cmd: katello_clean_yum
       {%- endfor %}
     {%- endif %}
   {%- endfor %}

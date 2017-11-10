@@ -380,9 +380,12 @@ def create_sync_plan(hostname, username, password, organization, frequency):
                
     if data['code'] == 200:
         return data
+   
+    elif data['code'] == 422:
+        return 'A ' + frequency + 'sync plan already exists'
 
     else:
-        return 'Error ' + str(data['code']) + ": " + json.dumps(data['content'])
+        ValueError( str(data['code']) + " - " + json.dumps(data['content']))
 
 def create_product(hostname, username, password, organization, product_name, gpg_key):
     organizations = check_settings(hostname, username, password, "/katello/api/organizations")
@@ -407,9 +410,12 @@ def create_product(hostname, username, password, organization, product_name, gpg
                
     if data['code'] == 200:
         return data
+   
+    elif data['code'] == 422:
+        return 'A product with this name already exists'
 
     else:
-        return 'Error ' + str(data['code']) + ": " + json.dumps(data['content'])
+        ValueError( str(data['code']) + " - " + json.dumps(data['content']))
 
 def create_repo(hostname, username, password,
                 organization,
@@ -450,12 +456,16 @@ def create_repo(hostname, username, password,
                              auth = HTTPBasicAuth(username, password))
 
     data = _load_response(response)
-               
+
     if data['code'] == 200:
         return data
+   
+    elif data['code'] == 422:
+        return 'A reoi with this name already exists'
 
     else:
-        return 'Error ' + str(data['code']) + ": " + json.dumps(data['content'])
+        ValueError( str(data['code']) + " - " + json.dumps(data['content']))
+              
 
 def sync_product_repos(hostname, username, password,
                        organization,
