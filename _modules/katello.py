@@ -358,7 +358,7 @@ def load_gpg_key(hostname, username, password, organization, key_url):
         return 'A GPG key with this name already exists'
 
     else:
-        return 'Error ' + str(data['code']) + ": " + json.dumps(data['content'])
+        ValueError( str(data['code']) + " - " + json.dumps(data['content']))
 
 def create_sync_plan(hostname, username, password, organization, frequency):
     '''

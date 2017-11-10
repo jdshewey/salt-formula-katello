@@ -113,7 +113,7 @@ katello_install:
       - cmd: katello_clean_yum
 katello_reset_pass:
   cmd.run:
-    - name: curl -s -k -X PUT -u admin:$( foreman-rake permissions:reset 2> /dev/null | awk '{print $6}' ) -H "Content-Type:application/json" -H "Accept:application/json" -d '{"login":"admin","current_password":"{{ server.admin_pass }}"}' https://slik01.example.com/api/v2/users/1
+    - name: curl -s -k -X PUT -u admin:$( foreman-rake permissions:reset 2> /dev/null | awk '{print $6}' ) -H "Content-Type:application/json" -H "Accept:application/json" -d '{"login":"admin","current_password":"{{ server.admin_pass }}"}' https://slik01.example.com/api/v2/users/admin
     - require:
       - cmd: katello_install
     - onchanges:

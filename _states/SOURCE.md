@@ -1,1 +1,0 @@
-The code in this folder is sourced from https://github.com/Nosmoht/ansible-module-foreman. Retrieved 10/29/17. No license was included and as such it is believed this has no copyright and belongs to the public domain.
