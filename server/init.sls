@@ -113,7 +113,7 @@ katello_install:
       - cmd: katello_clean_yum
 katello_reset_pass:
   cmd.run:
-    - name: curl -s -k -X PUT -u admin:$( foreman-rake permissions:reset | awk '{print $6}' ) -H "Content-Type:application/json" -H "Accept:application/json" -d '{"login":"admin","current_password":"{{ server.admin_pass }}"}' https://slik01.example.com/api/v2/users/3
+    - name: curl -s -k -X PUT -u admin:$( foreman-rake permissions:reset 2> /dev/null | awk '{print $6}' ) -H "Content-Type:application/json" -H "Accept:application/json" -d '{"login":"admin","current_password":"{{ server.admin_pass }}"}' https://slik01.example.com/api/v2/users/1
     - require:
       - cmd: katello_install
     - onchanges:
@@ -157,9 +157,21 @@ katello_ldap:
 {%- endif %}
 {%- if server.organizations is defined %}
   {%- for org_name, org_data in server.organizations.iteritems() %}
-    {%- if org_data is defined %}
-      {%- for product, repos in server.organizations.iteritems() %}
+    {%- if org_data.products is defined %}
+      {%- for product, repos in org_data.products.iteritems() %}
         {%- if repos is defined %}
+          {%- for repo, info in repos.iteritems() %}
+katello_gpg_key_{{ product }}_{{ repo }}:
+  module.run:
+    - katello.load_gpg_key:
+      - hostname: {{ grains['fqdn']  }}
+      - username: {{ server.admin_user }}
+      - password: {{ server.admin_pass }}
+      - organization: {{ org_name }}
+      - key_url: {{ info.gpg_key }}
+    - onchanges:
+      - cmd: katello_clean_yum
+          {%- endfor %}
         {%- endif %}
       {%- endfor %}
     {%- endif %}
