@@ -113,9 +113,10 @@ katello_install:
       - cmd: katello_clean_yum
 katello_reset_pass:
   cmd.run:
-    - name: curl -s -k -X PUT -u admin:$( foreman-rake permissions:reset 2> /dev/null | awk '{print $6}' ) -H "Content-Type:application/json" -H "Accept:application/json" -d '{"login":"admin","current_password":"{{ server.admin_pass }}"}' https://slik01.example.com/api/v2/users/admin
+    - name: /bin/bash -c $'PASSWORD=$( foreman-rake permissions:reset 2> /dev/null | awk "{printf \$6}" ); curl -s -k -X PUT -u admin:$PASSWORD -H "Content-Type:application/json" -H "Accept:application/json" -d "{\\\"login\\\":\\\"admin\\\", \\\"current_password\\\":\\\"$PASSWORD\\\", \\\"password\\\":\\\"{{ server.admin_pass }}\\\"}" https://slik01.example.com/api/v2/users/admin'
     - require:
       - cmd: katello_install
+      - firewalld: public
     - onchanges:
       - cmd: katello_clean_yum
 mkdir -p /etc/slik:
@@ -133,6 +134,15 @@ touch /etc/slik/installed:
 httpd:
   service.running:
     - enable: true
+katello_firewalld:
+  firewalld.present:
+    - name: public
+    - services:
+      - http
+      - https
+      - saltstack
+      - ssh
+      - dhcpv6-client
 {%- if server.ldap is defined %}
 katello_ldap:
   module:
@@ -169,6 +179,8 @@ katello_gpg_key_{{ product }}_{{ repo }}:
       - password: {{ server.admin_pass }}
       - organization: {{ org_name }}
       - key_url: {{ info.gpg_key }}
+    - requires:
+      - firewalld: katello_firewalld
     - onchanges:
       - cmd: katello_clean_yum
           {%- endfor %}
