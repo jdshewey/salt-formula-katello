@@ -230,6 +230,28 @@ katello_product_{{ product }}:
       - firewalld: katello_firewalld
     - onchanges:
       - cmd: katello_clean_yum
+        {%- if prod_info,repos is defined %}
+          {%- for repo, info in prod_info.repos.iteritems() %}
+katello_create_repo_{{ product }}{{ repo }}:
+  module.run:
+    - katello.create_repo:
+      - hostname: {{ grains['fqdn']  }}
+      - username: {{ server.admin_user }}
+      - password: {{ server.admin_pass }}
+      - organization: {{ org_name }}
+      - product_name: {{ product }}
+      - repo_name: {{ repo }}
+      - repo_url: {{ info.url }}
+      - content_type: yum
+      - gpg_key: {{ info.gpg_key }}
+    - requires:
+      - module: katello_product_{{ product }}
+      - module: katello_gpg_key_{{ product }}_{{ repo }}
+      - firewalld: katello_firewalld
+    - onchanges:
+      - cmd: katello_clean_yum
+          {%- endfor %}
+        {%- endif %}
       {%- endfor %}
     {%- endif %}
   {%- endfor %}
