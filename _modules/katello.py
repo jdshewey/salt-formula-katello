@@ -490,7 +490,7 @@ def create_repo(hostname, username, password,
         raise ValueError("Unable to find organization - check spelling")
 
     products = check_settings(hostname, username, password,
-                              "/katello/api/products?organization_id=" + str(organization_id))
+                              "/katello/api/organizations/" + str(organization_id) + "/products")
     for product in products:
         if product['name'] == product_name:
             product_id = product['id']
@@ -522,7 +522,7 @@ def create_repo(hostname, username, password,
         return data
 
     elif data['code'] == 422:
-        return 'A reoi with this name already exists'
+        return 'A repo with this name already exists'
 
     else:
         raise ValueError(str(data['code']) + " - " + json.dumps(data['content']))
