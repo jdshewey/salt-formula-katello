@@ -227,7 +227,7 @@ def add_os(hostname, username, password, name,
                      name, os_family, media_path, location, organization)
     if data['code'] != 201 and data['code'] != 200:
         raise ValueError('Problem adding/updating media: ' +
-                   str(data['code']) + ": " + json.dumps(data['content']))
+                         str(data['code']) + ": " + json.dumps(data['content']))
 
     response = requests.post('https://' + hostname + '/api/operatingsystems/',
                              data=json.dumps({'name': name, 'family': os_family, 'major': major_ver,
@@ -433,39 +433,47 @@ def create_sync_plan(hostname, username, password, organization, frequency):
     else:
         raise ValueError(str(data['code']) + " - " + json.dumps(data['content']))
 
-def create_product(hostname, username, password, organization, product_name, gpg_key):
+def create_product(hostname, username, password, organization, product_name, *args, **kwargs):
+    sync_plan=kwargs.get('sync_plan', None)
+ 
     organizations = check_settings(hostname, username, password, "/katello/api/organizations")
     for group in organizations:
         if group['name'] == organization:
             organization_id = group['id']
     if 'organization_id' not in locals():
         raise ValueError("Unable to find organization - check spelling")
+    
+    if sync_plan == None:
+        response = requests.post('https://' + hostname +
+                                 '/katello/api/products',
+                                 data=json.dumps({'organization_id': organization_id, 'name':
+                                                 product_name, 'description': product_name,
+                                                 'label': product_name.replace(" ", "_")}),
+                                 headers={'Content-Type': 'application/json'},
+                                 auth=HTTPBasicAuth(username, password))
+    else:
+        sync_plans = check_settings(hostname, username, password,
+                              "/katello/api/sync_plans?organization_id=" + str(organization_id))
+        for plan in sync_plans:
+            if plan['interval'] == sync_plan:
+                sync_plan_id = key['id']
 
-    gpg_keys = check_settings(hostname, username, password,
-                              "/katello/api/gpg_keys?organization_id=" + str(organization_id))
-    for key in gpg_keys:
-        if key['name'] == os.path.basename(gpg_key):
-            gpg_key_id = key['id']
-    if 'gpg_key_id'  not in locals():
-        raise ValueError("Unable to find GPG key - check spelling")
+        response = requests.post('https://' + hostname +
+                                 '/katello/api/products',
+                                 data=json.dumps({'organization_id': organization_id, 'name':
+                                                 product_name, 'description': product_name,
+                                                 'label': product_name.replace(" ", "_"),
+                                                 'sync_plan_id': sync_plan_id}),
+                                 headers={'Content-Type': 'application/json'},
+                                 auth=HTTPBasicAuth(username, password))
 
-    response = requests.post('https://' + hostname +
-                             '/katello/api/products',
-                             data=json.dumps({'organization_id': organization_id, 'name':
-                                             product_name, 'description': product_name,
-                                             'gpg_key_id': gpg_key_id,
-                                             'label': product_name.replace(" ", "_")}),
-                             headers={'Content-Type': 'application/json'},
-                             auth=HTTPBasicAuth(username, password))
 
     data = _load_response(response)
 
     if data['code'] == 200:
         return data
-
     elif data['code'] == 422:
         return 'A product with this name already exists'
-
     else:
         raise ValueError(str(data['code']) + " - " + json.dumps(data['content']))
 
@@ -527,6 +535,90 @@ def create_repo(hostname, username, password,
     else:
         raise ValueError(str(data['code']) + " - " + json.dumps(data['content']))
 
+def create_content_view (hostname, username, password, organization,
+                         content_view_name, content_repos):
+
+    organizations = check_settings(hostname, username, password, "/katello/api/organizations")
+    for group in organizations:
+        if group['name'] == organization:
+            organization_id = group['id']
+    if 'organization_id' not in locals():
+        raise ValueError("Unable to find organization - check spelling")
+
+    repo_ids = []
+    repos = check_settings(hostname, username, password,
+                           "/katello/api/repositories?organization_id=" + str(organization_id))
+    for repo_name, repodata in content_repos.iteritems():
+        if repo_name != "sync_plan":
+            for repository in repos:
+                if repo_name == repository['name']:
+                    repo_ids.append(repository['id'])
+
+    if 'sync_plan' in content_repos.keys():
+        if len(repo_ids)+1 != len(content_repos.values()):
+            raise ValueError('Unable to find repo in provided list (it doesn\'t exist yet.)' 
+                             + ' or too many repos found (make sure you don\'t have the same'
+                             + ' repo in two products. Use a composite view instead.)') 
+    else:
+        if len(repo_ids) != len(content_repos.values()):
+            raise ValueError('Unable to find repo in provided list (it doesn\'t exist yet.)' 
+                             + ' or too many repos found (make sure you don\'t have the same'
+                             + ' repo in two products. Use a composite view instead.)') 
+
+    response = requests.post('https://' + hostname +
+                             '/katello/api/content_views',
+                             data=json.dumps({'organization_id': organization_id, 'name':
+                                             content_view_name, 'description': content_view_name,
+                                             'label': content_view_name.replace(" ", "_"),
+                                             'repository_ids': repo_ids}),
+                             headers={'Content-Type': 'application/json'},
+                             auth=HTTPBasicAuth(username, password))
+
+    data = _load_response(response)
+
+    if data['code'] == 200:
+        return data
+    elif data['code'] == 422:
+        return 'A product with this name already exists'
+    else:
+        raise ValueError(str(data['code']) + " - " + json.dumps(data['content']))
+
+def create_composite_view (hostname, username, password, organization,
+                         composite_view_name, content_views):
+
+    organizations = check_settings(hostname, username, password, "/katello/api/organizations")
+    for group in organizations:
+        if group['name'] == organization:
+            organization_id = group['id']
+    if 'organization_id' not in locals():
+        raise ValueError("Unable to find organization - check spelling")
+
+    content_view_ids = []
+    content_views = check_settings(hostname, username, password,
+                           "/katello/api/repositories?organization_id=" + str(organization_id))
+    for view in content_views:
+        content_view_ids.append(view['id'])
+
+    if len(content_view_ids) != len(content_views):
+	raise ValueError('Unable to find the listed content_views')
+
+    response = requests.post('https://' + hostname +
+                             '/katello/api/content_views',
+                             data=json.dumps({'organization_id': organization_id, 'name':
+                                             composite_view_name, 'description': composite_view_name,
+                                             'label': composite_view_name.replace(" ", "_"),
+                                             'content_ids': content_view_ids, 'composite': 1}),
+                             headers={'Content-Type': 'application/json'},
+                             auth=HTTPBasicAuth(username, password))
+
+    data = _load_response(response)
+
+    if data['code'] == 200:
+        return data
+    elif data['code'] == 422:
+        return 'A product with this name already exists'
+    else:
+        raise ValueError(str(data['code']) + " - " + json.dumps(data['content']))
 
 def sync_product_repos(hostname, username, password,
                        organization,
@@ -556,5 +648,45 @@ def sync_product_repos(hostname, username, password,
 
     if data['code'] == 200:
         return data
+    elif data['code'] == 202:
+        return ('Sync initiated and in progress. View progress in your web browser at:\n' +
+                'https://' + hostname + '/foreman_tasks/tasks\n' +
+                'https://' + hostname + 'katello/sync_management\n')
+    elif data['code'] == 422:
+        raise ValueError('Unable to synchronize any repository. You either do not have the ' +
+                         'permission to synchronize or the selected product contains no ' +
+                         'repositories to sync.')
     else:
         raise ValueError(str(data['code']) + ": " + json.dumps(data['content']))
+
+def create_environmnent(hostname, username, password, organization,
+                        environment_name, *args, **kwargs):
+    parent_environment = kwargs.get('parent_environment', 'Library')
+    return "noop"
+
+def create_activation_key(hostname, username, password, organization,
+                          name, *args, **kwargs):
+
+    environment  = kwargs.get('environment', None) #This is the pupet env. Need to set to salt env.
+    content_view = kwargs.get('content_view', None)
+    max_hosts    = kwargs.get('max_hosts', 0)
+
+    organizations = check_settings(hostname, username, password, "/katello/api/organizations")
+    for group in organizations:
+        if group['name'] == organization:
+            organization_id = group['id']
+    if 'organization_id' not in locals():
+        raise ValueError("Unable to find organization - check spelling")
+
+    response = requests.post('https://' + hostname + '/katello/api/activation_keys', 
+                             data=json.dumps({'organization_id': organization_id, 'name': name}),
+                             headers={'Content-Type': 'application/json'},
+                             auth=HTTPBasicAuth(username, password))
+
+    if data['code'] == 200:
+        return data
+    elif data['code'] == 422:
+        return 'An activation key with this name already exists'
+    else:
+        raise ValueError(str(data['code']) + " - " + json.dumps(data['content']))
+

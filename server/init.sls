@@ -1,5 +1,78 @@
 {%- from "katello/map.jinja" import server with context %}
 
+########################################################
+#
+#    Helper Macro for Lifecycle Environment creation
+#
+########################################################
+
+#Hack to create global variables to work around namespace/scope issues
+{%- set global_org_name = [0] %}
+{%- set global_last_env = [0] %}
+
+{% macro environment_states(env) %}
+{%- do salt.log.error(env) %}
+  {%- if env is mapping %}
+  #If this is one of the subsequent recursive calls of the macro
+katello_create_env_{{ env[0].keys()[0] }}:
+  module.run:
+    - katello.create_environment:
+      - hostname: {{ grains['fqdn'] }}
+      - username: {{ server.admin_user }}
+      - password: {{ server.admin_pass }}
+      - organization: {{ global_org_name[0] }}
+      - environment_name: {{ env[0].keys()[0] }} 
+    - onchanges:
+      - cmd: katello_clean_yum
+    {% set _ = global_last_env.pop() %}
+    {% set _ = global_last_env.append(env[0].keys()[0]) %}
+    {{ environment_states(env.values()[0]) }}
+  {%- else %}
+    {%- if env[0] is not string %}
+    #If this is the first iteration of the macro
+katello_create_env_{{ env[0].keys()[0] }}:
+  module.run:
+    - katello.create_environment:
+      - hostname: {{ grains['fqdn'] }}
+      - username: {{ server.admin_user }}
+      - password: {{ server.admin_pass }}
+      - organization: {{ global_org_name[0] }}
+      - environment_name: {{ env[0].keys()[0] }}
+      - parent_environment: global_last_env[0] 
+    - onchanges:
+      - cmd: katello_clean_yum
+      {% set _ = global_last_env.pop() %}
+      {% set _ = global_last_env.append(env[0].keys()[0]) %}
+      {{ environment_states(env[0].values()[0]) }}
+    {%- else %}
+    #if this is the final call of the macro
+katello_create_env_{{ env[0] }}:
+  module.run:
+    - katello.create_environment:
+      - hostname: {{ grains['fqdn'] }}
+      - username: {{ server.admin_user }}
+      - password: {{ server.admin_pass }}
+      - organization: {{ global_org_name[0] }}
+      - environment_name: {{ env[0] }}
+      {%- if global_last_env[0] != 0 %}
+      #In case there is only 1 environment
+      - parent_environment: global_last_env[0]
+      {%- endif %}
+    - onchanges:
+      - cmd: katello_clean_yum
+      #cleanup for possible future run
+      {% set _ = global_last_env.pop() %}
+      {% set _ = global_last_env.append(0) %}
+    {%- endif %}
+  {%- endif %}
+{% endmacro %}
+
+##############################
+#
+#    Katello installation
+#
+#############################
+
 katello_clean_yum:
   cmd.run:
     - name: yum -y clean all || true
@@ -28,7 +101,7 @@ katello_display_progress:
       - LC_CTYPE: en_US.UTF-8
 {%- endif %}
 katello_server_pkgs:
- pkg.installed:
+  pkg.installed:
     - names: {{ server.pkgs }}
     - require:
       - file: katello_sources
@@ -155,7 +228,7 @@ katello_ldap:
   module:
     - run
     - name: katello.add_ldap_source
-    - hostname: {{ grains['fqdn']  }}
+    - hostname: {{ grains['fqdn'] }}
     - username: {{ server.admin_user }}
     - password: {{ server.admin_pass }}
     - ldap_hostname: {{ server.ldap.source }}
@@ -170,72 +243,95 @@ katello_ldap:
         groups_base: {{ server.ldap.group_dn | urlencode() }}
         automagic_account_creation: {{ server.ldap.get('automagic_account_creation', 1) }}
         usergroup_sync: {{ server.ldap.get('usergroup_sync', 1) }}
-    - requires:
+    - require:
       - firewalld: katello_firewalld
 {%- endif %}
 
-#################################
+############################################################
 #
-#    Configure products/repos
+#    Configure Content Views and Content View requisites
 #
-#################################
+############################################################
 
 {%- endif %}
 {%- if server.organizations is defined %}
   {%- for org_name, org_data in server.organizations.iteritems() %}
-    {%- if org_data.sync_plan is defined %}
-katello_sync_plan_{{ org_name }}:
+katello_sync_plan_{{ org_name }}_hourly:
   module.run:
     - katello.create_sync_plan:
-      - hostname: {{ grains['fqdn']  }}
+      - hostname: {{ grains['fqdn'] }}
       - username: {{ server.admin_user }}
       - password: {{ server.admin_pass }}
       - organization: {{ org_name }}
-      - frequency: {{ org_data.sync_plan }}
-    - requires:
+      - frequency: hourly
+    - require:
       - firewalld: katello_firewalld
     - onchanges:
       - cmd: katello_clean_yum
-    {%- endif %}
-    {%- if org_data.products is defined %}
-      {%- for product, prod_info in org_data.products.iteritems() %}
-        {%- if prod_info,repos is defined %}
-          {%- for repo, info in prod_info.repos.iteritems() %}
-katello_gpg_key_{{ product }}_{{ repo }}:
+katello_sync_plan_{{ org_name }}_daily:
   module.run:
-    - katello.load_gpg_key:
-      - hostname: {{ grains['fqdn']  }}
+    - katello.create_sync_plan:
+      - hostname: {{ grains['fqdn'] }}
       - username: {{ server.admin_user }}
       - password: {{ server.admin_pass }}
       - organization: {{ org_name }}
-      - key_url: {{ info.gpg_key }}
-    - requires:
+      - frequency: daily
+    - require:
       - firewalld: katello_firewalld
-    - require_in:
-      - module: katello_product_{{ product }}
     - onchanges:
       - cmd: katello_clean_yum
-          {%- endfor %}
-        {%- endif %}
+katello_sync_plan_{{ org_name }}_weekly:
+  module.run:
+    - katello.create_sync_plan:
+      - hostname: {{ grains['fqdn'] }}
+      - username: {{ server.admin_user }}
+      - password: {{ server.admin_pass }}
+      - organization: {{ org_name }}
+      - frequency: weekly
+    - require:
+      - firewalld: katello_firewalld
+    - onchanges:
+      - cmd: katello_clean_yum
+    {%- if org_data.products is defined %}
+      {%- for product, repos in org_data.products.iteritems() %}
 katello_product_{{ product }}:
   module.run:
     - katello.create_product:
-      - hostname: {{ grains['fqdn']  }}
+      - hostname: {{ grains['fqdn'] }}
       - username: {{ server.admin_user }}
       - password: {{ server.admin_pass }}
       - organization: {{ org_name }}
       - product_name: {{ product }}
-      - gpg_key: {{ prod_info.gpg_key }}
-    - requires:
+        {%- if repos.sync_plan is defined %}
+      - sync_plan: {{ repos.sync_plan }} 
+    - require:
+      - module: katello_sync_plan_{{ org_name }}_hourly
+      - module: katello_sync_plan_{{ org_name }}_daily
+      - module: katello_sync_plan_{{ org_name }}_weekly
+        {%- else %}
+    - require:
+        {%- endif %}
       - firewalld: katello_firewalld
     - onchanges:
       - cmd: katello_clean_yum
-        {%- if prod_info,repos is defined %}
-          {%- for repo, info in prod_info.repos.iteritems() %}
+        {%- for repo, info in repos.iteritems() %}
+          {%- if repo != 'sync_plan' %}
+katello_gpg_key_{{ product }}_{{ repo }}:
+  module.run:
+    - katello.load_gpg_key:
+      - hostname: {{ grains['fqdn'] }}
+      - username: {{ server.admin_user }}
+      - password: {{ server.admin_pass }}
+      - organization: {{ org_name }}
+      - key_url: {{ info.gpg_key }}
+    - require:
+      - firewalld: katello_firewalld
+    - onchanges:
+      - cmd: katello_clean_yum
 katello_create_repo_{{ product }}_{{ repo }}:
   module.run:
     - katello.create_repo:
-      - hostname: {{ grains['fqdn']  }}
+      - hostname: {{ grains['fqdn'] }}
       - username: {{ server.admin_user }}
       - password: {{ server.admin_pass }}
       - organization: {{ org_name }}
@@ -244,15 +340,80 @@ katello_create_repo_{{ product }}_{{ repo }}:
       - gpg_key: {{ info.gpg_key }}
       - content_type: yum
       - repo_url: {{ info.url }}
-#    - requires:
-#      - module: katello_product_{{ product }}
-#      - module: katello_gpg_key_{{ product }}_{{ repo }}
-#      - firewalld: katello_firewalld
-#    - onchanges:
-#      - cmd: katello_clean_yum
-          {%- endfor %}
-        {%- endif %}
+    - require:
+      - module: katello_product_{{ product }}
+      - module: katello_gpg_key_{{ product }}_{{ repo }}
+      - firewalld: katello_firewalld
+    - require_in:
+      - module: katello_create_view_{{ product }}
+    - onchanges:
+      - cmd: katello_clean_yum
+          {%- endif %}
+        {%- endfor %}
+katello_create_view_{{ product }}:
+  module.run:
+    - katello.create_content_view:
+      - hostname: {{ grains['fqdn'] }}
+      - username: {{ server.admin_user }}
+      - password: {{ server.admin_pass }}
+      - organization: {{ org_name }}
+      - content_view_name: {{ product }}
+      - content_repos: {{ repos }}
+    - onchanges:
+      - cmd: katello_clean_yum
+katello_sync_product_{{ product }}:
+  module.run:
+    - katello.sync_product_repos:
+      - hostname: {{ grains['fqdn'] }}
+      - username: {{ server.admin_user }}
+      - password: {{ server.admin_pass }}
+      - organization: {{ org_name }}
+      - product_name: {{ product }}
+    - require:
+      - module: katello_create_view_{{ product }}
+    - onchanges:
+      - cmd: katello_clean_yum
       {%- endfor %}
+    {%- endif %}
+
+##################################
+#
+#    Configure Composite Views
+#
+##################################
+
+    {% if org_data.composite_views is defined %}
+      {%- for view_name, child_views in org_data.composite_views.iteritems() %}
+katello_create_composite_view_{{ view_name }}:
+  module.run:
+    - katello.create_composite_view:
+      - hostname: {{ grains['fqdn'] }}
+      - username: {{ server.admin_user }}
+      - password: {{ server.admin_pass }}
+      - organization: {{ org_name }}
+      - composite_view_name: {{ view_name }}
+      - content_views: {{ child_views }}
+    - onchanges:
+      - cmd: katello_clean_yum
+    - require:
+        {%- for content_view in child_views %}
+      - module: katello_sync_product_{{ content_view }}
+        {%- endfor %}
+      {%- endfor %}
+    {%- endif %}
+
+#########################################
+#
+#    Configure Lifecycle Environments
+#
+#########################################
+
+    {% if org_data.environments is defined %}
+      {% set _ = global_org_name.pop() %}
+      {% set _ = global_org_name.append(org_name) %}
+      {{ environment_states(org_data.environments) }}
     {%- endif %}
   {%- endfor %}
 {%- endif %}
+
+

@@ -147,7 +147,7 @@ enabled = 1
 gpgcheck = 0
 
 [StaltStack]
-baseurl = http://repo.saltstack.com/yum/redhat/7/x86_64/latest/
+baseurl = https://repo.saltstack.com/yum/redhat/7/x86_64/latest/
 sslverify = 1
 name = SaltStack
 enabled = 1

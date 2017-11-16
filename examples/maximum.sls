@@ -4,10 +4,12 @@ katello:
     admin_pass: YEYorBtB6ZP1
     locations:
       - podunk
-#    rc: true
-#    nightly: true
+      - timbuktu
+      - abu dhabi
+    nightly: true
     organizations:
       foobar:
+        subscription_manifest: manifest_6c20e080-2db6-455f-b340-56eaba3a7d16.zip
         products:
           Katello:
             sync_plan: daily
@@ -42,12 +44,12 @@ katello:
               url: https://yum.puppetlabs.com/el/7/PC1/x86_64/
               gpg_key: https://yum.puppetlabs.com/RPM-GPG-KEY-puppet
           EPEL:
-            sync_plan: daily
+            sync_plan: weekly
             EPEL:
               url: https://mirrors.kernel.org/fedora-epel/7/x86_64/
               gpg_key: https://mirrors.kernel.org/fedora-epel/RPM-GPG-KEY-EPEL-7
           CentOS 7:
-            sync_plan: daily
+            sync_plan: hourly
             CentOS 7 Base:
               url: https://mirrors.kernel.org/centos/7/os/x86_64/
               gpg_key: https://mirrors.kernel.org/centos/7/os/x86_64/RPM-GPG-KEY-CentOS-7
@@ -73,16 +75,39 @@ katello:
 ####### Content Views are versioned and released/promoted to Lifecycle Environments.
 
         environments:
-          - Dev:
-            - Test:
-              - Prod
+          - Dev
+          - Test
+          - Prod
 
-###### Activation keys allow you to tie a host to a specific Lifecycle Environment and Content View
-###### or Composite View.
+####### Activation keys allow you to tie a host to a specific Lifecycle Environment and Content View
+####### or Composite View.
 
-        activation_keys:
+        activation_keys
           SLIK:
             view: SLIK
             environment: Prod
+            max_hosts: 10
           CentOS 7:
             view: CentOS 7 - EPEL
+      barbaz:
+        subscription_manifest: manifest_6c20e080-2db6-455f-b340-56eaba3a7d16.zip
+        products:
+          Fedora:
+            sync_plan: manual
+            CentOS 7 SLCo:
+              url: https://mirrors.kernel.org/centos/7/sclo/x86_64/sclo/
+              gpg_key: https://mirrors.kernel.org/centos/7/os/x86_64/RPM-GPG-KEY-CentOS-7
+
+####### Content Views are versioned and released/promoted to Lifecycle Environments.
+
+        environments:
+          - Dev
+          - Test
+          - Prod
+
+###### Activation keys allow you (optionally) to tie a host to a specific Lifecycle Environment and
+###### Content View or Composite View.
+
+       activation_keys:
+         Fedora:
+           view: Fedora
