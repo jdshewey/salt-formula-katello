@@ -456,7 +456,7 @@ def create_product(hostname, username, password, organization, product_name, *ar
                               "/katello/api/sync_plans?organization_id=" + str(organization_id))
         for plan in sync_plans:
             if plan['interval'] == sync_plan:
-                sync_plan_id = key['id']
+                sync_plan_id = plan['id']
 
         response = requests.post('https://' + hostname +
                                  '/katello/api/products',

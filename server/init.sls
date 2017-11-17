@@ -86,6 +86,13 @@ katello_sources:
     - template: jinja
     - onchanges: 
       - cmd: katello_clean_yum
+katello_clean_yum2:
+  cmd.run:
+    - name: yum -y clean metadata || true
+    - onchanges: 
+      - cmd: katello_clean_yum
+    - require:
+      - file: katello_sources
 {%- if grains.get('current_tty', None) != None %}
 katello_display_progress:
   cmd.run:
@@ -186,7 +193,7 @@ katello_install:
       - cmd: katello_clean_yum
 katello_reset_pass:
   cmd.run:
-    - name: /bin/bash -c $'PASSWORD=$( foreman-rake permissions:reset 2> /dev/null | awk "{printf \$6}" ); curl -s -k -X PUT -u admin:$PASSWORD -H "Content-Type:application/json" -H "Accept:application/json" -d "{\\\"login\\\":\\\"admin\\\", \\\"current_password\\\":\\\"$PASSWORD\\\", \\\"password\\\":\\\"{{ server.admin_pass }}\\\"}" https://{{ grains['fqdn' }}/api/v2/users/admin'
+    - name: /bin/bash -c $'PASSWORD=$( foreman-rake permissions:reset 2> /dev/null | awk "{printf \$6}" ); curl -s -k -X PUT -u admin:$PASSWORD -H "Content-Type:application/json" -H "Accept:application/json" -d "{\\\"login\\\":\\\"admin\\\", \\\"current_password\\\":\\\"$PASSWORD\\\", \\\"password\\\":\\\"{{ server.admin_pass }}\\\"}" https://{{ grains['fqdn'] }}/api/v2/users/admin'
     - require:
       - cmd: katello_install
       - firewalld: public
