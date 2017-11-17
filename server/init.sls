@@ -186,7 +186,7 @@ katello_install:
       - cmd: katello_clean_yum
 katello_reset_pass:
   cmd.run:
-    - name: /bin/bash -c $'PASSWORD=$( foreman-rake permissions:reset 2> /dev/null | awk "{printf \$6}" ); curl -s -k -X PUT -u admin:$PASSWORD -H "Content-Type:application/json" -H "Accept:application/json" -d "{\\\"login\\\":\\\"admin\\\", \\\"current_password\\\":\\\"$PASSWORD\\\", \\\"password\\\":\\\"{{ server.admin_pass }}\\\"}" https://slik01.example.com/api/v2/users/admin'
+    - name: /bin/bash -c $'PASSWORD=$( foreman-rake permissions:reset 2> /dev/null | awk "{printf \$6}" ); curl -s -k -X PUT -u admin:$PASSWORD -H "Content-Type:application/json" -H "Accept:application/json" -d "{\\\"login\\\":\\\"admin\\\", \\\"current_password\\\":\\\"$PASSWORD\\\", \\\"password\\\":\\\"{{ server.admin_pass }}\\\"}" https://{{ grains['fqdn' }}/api/v2/users/admin'
     - require:
       - cmd: katello_install
       - firewalld: public
@@ -225,26 +225,27 @@ katello_firewalld:
 
 {%- if server.ldap is defined %}
 katello_ldap:
-  module:
-    - run
+  module.run
     - name: katello.add_ldap_source
-    - hostname: {{ grains['fqdn'] }}
-    - username: {{ server.admin_user }}
-    - password: {{ server.admin_pass }}
-    - ldap_hostname: {{ server.ldap.source }}
-    - port: 636
+      - hostname: {{ grains['fqdn'] }}
+      - username: {{ server.admin_user }}
+      - password: {{ server.admin_pass }}
+      - ldap_hostname: {{ server.ldap.source }}
+      - port: 636
 # When is http://projects.theforeman.org/issues/7016 gonna be patched?
-    - server_type: {{ server.get('server.ldap.type', 'free_ipa') }}
-    - base_dn: {{ server.ldap.base_dn | urlencode() }}
-{%- if server.ldap.type == undefined or server.ldap.type == 'free_ipa' %}
-    - kwargs:
-        ldap_user: {{ server.ldap.user }}
-        ldap_password: {{ server.ldap.pass }}
-        groups_base: {{ server.ldap.group_dn | urlencode() }}
-        automagic_account_creation: {{ server.ldap.get('automagic_account_creation', 1) }}
-        usergroup_sync: {{ server.ldap.get('usergroup_sync', 1) }}
+      - server_type: {{ server.get('server.ldap.type', 'free_ipa') }}
+      - base_dn: {{ server.ldap.base_dn | urlencode() }}
+  {%- if server.ldap.type is not defined or server.ldap.type == 'free_ipa' %}
+      - ldap_user: {{ server.ldap.user }}
+      - ldap_password: {{ server.ldap.pass }}
+      - groups_base: {{ server.ldap.group_dn | urlencode() }}
+      - automagic_account_creation: {{ server.ldap.get('automagic_account_creation', 1) }}
+      - usergroup_sync: {{ server.ldap.get('usergroup_sync', 1) }}
     - require:
       - firewalld: katello_firewalld
+    - onchanges:
+      - cmd: katello_clean_yum
+  {%- endif %}
 {%- endif %}
 
 ############################################################
@@ -253,7 +254,6 @@ katello_ldap:
 #
 ############################################################
 
-{%- endif %}
 {%- if server.organizations is defined %}
   {%- for org_name, org_data in server.organizations.iteritems() %}
 katello_sync_plan_{{ org_name }}_hourly:

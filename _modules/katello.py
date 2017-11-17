@@ -428,7 +428,7 @@ def create_sync_plan(hostname, username, password, organization, frequency):
         return data
 
     elif data['code'] == 422:
-        return 'A ' + frequency + 'sync plan already exists'
+        return 'A ' + frequency + ' sync plan already exists'
 
     else:
         raise ValueError(str(data['code']) + " - " + json.dumps(data['content']))
