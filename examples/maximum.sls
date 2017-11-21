@@ -7,6 +7,16 @@ katello:
       - timbuktu
       - abu dhabi
     nightly: true
+    ldap:
+      source: slik01.example.com
+#Other options are: active_directory, posix - see https://github.com/jdshewey/salt-formula-katello/issues/12
+      type: free_ipa
+      base_dn: dc=example,dc=com
+      group_dn: cn=groups,cn=accounts,dc=example,dc=com
+      user: ldap-service
+      pass: qwerty12345!@#
+#      automagic_account_creation: 1 - optional
+#      usergroup_sync: 1             - optional
     organizations:
       foobar:
         subscription_manifest: manifest_6c20e080-2db6-455f-b340-56eaba3a7d16.zip

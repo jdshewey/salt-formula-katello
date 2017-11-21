@@ -41,6 +41,10 @@ Report bugs at https://github.com/jdshewey/salt-formula-katello/issues
 #  Contributions
 Contributions are extremely welcome! Please feel free to fork a copy of this formula and choose an issue or milestone to tackle. Once finished, and you are sure it is working, create a pull request for review, and I will do my best to reveiew and merge it as soon as possible.
 
+## Module development
+
+If you wish to contribute to the development of the katello.py module, you will find the REST API documentation at https://yourserver.example.com/apidoc/. Please be sure to lint your with with the pylint module before submiting a Pull Request.
+
 #  Attribution
 Created by James Shewey<br>
 jdshewey.com<br>

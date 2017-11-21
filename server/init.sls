@@ -21,9 +21,12 @@ katello_create_env_{{ env[0].keys()[0] }}:
       - username: {{ server.admin_user }}
       - password: {{ server.admin_pass }}
       - organization: {{ global_org_name[0] }}
-      - environment_name: {{ env[0].keys()[0] }} 
-    - onchanges:
-      - cmd: katello_clean_yum
+      - environment_name: {{ env[0].keys()[0] }}
+      - parent_environment: global_last_env[0] 
+#    - onchanges:
+#      - cmd: katello_clean_yum
+    - require:
+      - module: katello_create_env_{{ global_last_env[0] }}
     {% set _ = global_last_env.pop() %}
     {% set _ = global_last_env.append(env[0].keys()[0]) %}
     {{ environment_states(env.values()[0]) }}
@@ -38,9 +41,8 @@ katello_create_env_{{ env[0].keys()[0] }}:
       - password: {{ server.admin_pass }}
       - organization: {{ global_org_name[0] }}
       - environment_name: {{ env[0].keys()[0] }}
-      - parent_environment: global_last_env[0] 
-    - onchanges:
-      - cmd: katello_clean_yum
+#    - onchanges:
+#      - cmd: katello_clean_yum
       {% set _ = global_last_env.pop() %}
       {% set _ = global_last_env.append(env[0].keys()[0]) %}
       {{ environment_states(env[0].values()[0]) }}
@@ -56,10 +58,12 @@ katello_create_env_{{ env[0] }}:
       - environment_name: {{ env[0] }}
       {%- if global_last_env[0] != 0 %}
       #In case there is only 1 environment
-      - parent_environment: global_last_env[0]
+      - parent_environment: {{ global_last_env[0] }}
+    - require:
+      - module: katello_create_env_{{ global_last_env[0] }}
       {%- endif %}
-    - onchanges:
-      - cmd: katello_clean_yum
+#    - onchanges:
+#      - cmd: katello_clean_yum
       #cleanup for possible future run
       {% set _ = global_last_env.pop() %}
       {% set _ = global_last_env.append(0) %}
@@ -232,8 +236,8 @@ katello_firewalld:
 
 {%- if server.ldap is defined %}
 katello_ldap:
-  module.run
-    - name: katello.add_ldap_source
+  module.run:
+    - katello.add_ldap_source:
       - hostname: {{ grains['fqdn'] }}
       - username: {{ server.admin_user }}
       - password: {{ server.admin_pass }}
@@ -248,11 +252,11 @@ katello_ldap:
       - groups_base: {{ server.ldap.group_dn | urlencode() }}
       - automagic_account_creation: {{ server.ldap.get('automagic_account_creation', 1) }}
       - usergroup_sync: {{ server.ldap.get('usergroup_sync', 1) }}
+  {%- endif %}
     - require:
       - firewalld: katello_firewalld
     - onchanges:
       - cmd: katello_clean_yum
-  {%- endif %}
 {%- endif %}
 
 ############################################################
@@ -406,6 +410,10 @@ katello_create_composite_view_{{ view_name }}:
         {%- for content_view in child_views %}
       - module: katello_sync_product_{{ content_view }}
         {%- endfor %}
+        {%- if org_data.environments is defined %}
+#    - require_in:
+#      - module: {{ org_data.environments[0].keys()[0] }}
+        {%- endif %}
       {%- endfor %}
     {%- endif %}
 

@@ -277,53 +277,62 @@ def add_ldap_source(hostname, username, password,
     '''
     TODO:
         * Verify password and update it if changed
-        * Fix issue adding password
     '''
 
-    print automagic_account_creation
-    ldap_sources = check_settings(hostname, username, password, '/api/auth_source_ldaps')
-    for source in ldap_sources:
-        if source['name'] == ldap_hostname:
+#    ldap_sources = check_settings(hostname, username, password, '/api/auth_source_ldaps')
+#    for source in ldap_sources:
+#        if source['name'] == ldap_hostname:
             # Overwrite/update existing LDAP settings
-            if (source['account'] != ldap_user or source['port'] != port or
-              source['host'] != ldap_hostname or source['server_type'] != server_type or
-              source['onthefly_register'] != automagic_account_creation or
-              source['usergroup_sync'] != usergroup_sync or source['groups_base'] != groups_base
-              or source['ldap_filter'] != ldap_filter or source['attr_login'] != attr_map_login or
-              source['attr_firstname'] != attr_map_given_name or
-              source['attr_lastname'] != attr_map_family_name or source['attr_mail'] != attr_map_email or
-              source['attr_photo'] != attr_map_mugshot or source['base_dn'] !=  urllib.unquote(base_dn)):
-                response = requests.delete('https://' + hostname + '/api/auth_source_ldaps/%s' %
-                                           source['id'], auth=HTTPBasicAuth(username, password))
-                data = _load_response(response)
-
-                if data['code'] != 200:
-                    raise ValueError(str(data['code']) + ": " + json.dumps(data['content']))
-        if data == None:
-            spoof = {'code': 200, 'content': source}
-            return spoof
-
+#            if (source['account'] != ldap_user or source['port'] != port or
+#                source['host'] != ldap_hostname or source['server_type'] != server_type or
+#                source['onthefly_register'] != automagic_account_creation or
+#                source['usergroup_sync'] != usergroup_sync or
+#                source['groups_base'] != groups_base or source['ldap_filter'] != ldap_filter or
+#                source['attr_login'] != attr_map_login or
+#                source['attr_firstname'] != attr_map_given_name or
+#                source['attr_lastname'] != attr_map_family_name or
+#                source['attr_mail'] != attr_map_email or
+#                source['attr_photo'] != attr_map_mugshot or
+#                source['base_dn'] !=  urllib.unquote(base_dn)):
+#                response = requests.delete('https://' + hostname + '/api/auth_source_ldaps/%s' %
+#                                           source['id'], auth=HTTPBasicAuth(username, password))
+#                data = _load_response(response)
+#
+#                if data['code'] != 200:
+#                    raise ValueError(str(data['code']) + ": " + json.dumps(data['content']))
+#            elif 'data' not in locals():
+#                spoof = {'code': 200, 'content': source}
+#                return spoof
+#
+#        else:
     response = requests.post('https://' + hostname + '/api/auth_source_ldaps',
-                             data = json.dumps({'name': ldap_hostname, 'host': ldap_hostname,
-                                               'port': port, 'account': ldap_user, 'server_type':
-                                               server_type, 'base_dn': urllib.unquote(base_dn),
-                                               'attr_login': attr_map_login, 'attr_firstname':
-                                               attr_map_given_name, 'attr_lastname':
-                                               attr_map_family_name, 'attr_mail': attr_map_email,
-                                               'attr_photo': attr_map_mugshot, 'onthefly_register':
-                                               automagic_account_creation, 'usergroup_sync':
-                                               usergroup_sync, 'tls': tls, 'groups_base':
-                                               groups_base, 'server_type': server_type,
-                                               'ldap_filter': ldap_filter}),
-                             headers = {'Content-Type': 'application/json'},
-                             auth = HTTPBasicAuth(username, password))
-                             #Seriously, if you are mad about the arch and hash, stop using old, insecure and outdated crap.
+                                     data = json.dumps({'name': ldap_hostname,
+                                                       'host': ldap_hostname,
+                                                       'port': port, 'account': ldap_user,
+                                                       'account_password': ldap_password,
+                                                       'server_type': server_type,
+                                                       'base_dn': urllib.unquote(base_dn),
+                                                       'attr_login': attr_map_login,
+                                                       'attr_firstname': attr_map_given_name,
+                                                       'attr_lastname': attr_map_family_name,
+                                                       'attr_mail': attr_map_email,
+                                                       'attr_photo': attr_map_mugshot,
+                                                       'onthefly_register':
+                                                       automagic_account_creation,
+                                                       'usergroup_sync': usergroup_sync,
+                                                       'tls': tls,
+                                                       'groups_base': urllib.unquote(groups_base),
+                                                       'server_type': server_type,
+                                                       'ldap_filter': ldap_filter}),
+                                     headers = {'Content-Type': 'application/json'},
+                                     auth = HTTPBasicAuth(username, password))
+                                     #Seriously, if you are mad about the arch and hash, stop using
+                                     #old, insecure and outdated crap.
 
     data = _load_response(response)
 
     if data['code'] == 201:
         return data
-
     else:
         raise ValueError(str(data['code']) + ": " + json.dumps(data['content']))
 
@@ -659,10 +668,37 @@ def sync_product_repos(hostname, username, password,
     else:
         raise ValueError(str(data['code']) + ": " + json.dumps(data['content']))
 
-def create_environmnent(hostname, username, password, organization,
+def create_environment(hostname, username, password, organization,
                         environment_name, *args, **kwargs):
     parent_environment = kwargs.get('parent_environment', 'Library')
-    return "noop"
+
+    organizations = check_settings(hostname, username, password, "/katello/api/organizations")
+    for group in organizations:
+        if group['name'] == organization:
+            organization_id = group['id']
+    if 'organization_id' not in locals():
+        raise ValueError("Unable to find organization - check spelling")
+
+    existing_environments = check_settings(hostname, username, password, "/katello/api/environments")
+    for env in existing_environments:
+        if env['name'] == parent_environment:
+            parent_id = env['id']
+    if 'parent_id' not in locals():
+        raise ValueError("Unable to find parent environment")
+
+    response = requests.post('https://' + hostname + '/katello/api/activation_keys', 
+                             data=json.dumps({'organization_id': organization_id, 
+                                              'name': environment_name,
+                                              'prior_id': parent_id}),
+                             headers={'Content-Type': 'application/json'},
+                             auth=HTTPBasicAuth(username, password))
+
+    if data['code'] == 200:
+        return data
+    elif data['code'] == 422:
+        return 'A Lifecycle Environment with this name already exists'
+    else:
+        raise ValueError(str(data['code']) + " - " + json.dumps(data['content']))
 
 def create_activation_key(hostname, username, password, organization,
                           name, *args, **kwargs):
