@@ -11,9 +11,9 @@
 {%- set global_last_env = [0] %}
 
 {% macro environment_states(env) %}
-{%- do salt.log.error(env) %}
-  {%- if env is mapping %}
-  #If this is one of the subsequent recursive calls of the macro
+  {%- do salt.log.error(env) -%}
+  {%- if env[0] is not string %}
+  #If this is not the final iteration of the macro
 katello_create_env_{{ env[0].keys()[0] }}:
   module.run:
     - katello.create_environment:
@@ -22,32 +22,19 @@ katello_create_env_{{ env[0].keys()[0] }}:
       - password: {{ server.admin_pass }}
       - organization: {{ global_org_name[0] }}
       - environment_name: {{ env[0].keys()[0] }}
-      - parent_environment: global_last_env[0] 
-#    - onchanges:
-#      - cmd: katello_clean_yum
+    {%- if global_last_env[0] != 0 %}
+    #If this is the first iteration of the macro
+      - parent_environment: {{ global_last_env[0] }}
     - require:
       - module: katello_create_env_{{ global_last_env[0] }}
-    {% set _ = global_last_env.pop() %}
-    {% set _ = global_last_env.append(env[0].keys()[0]) %}
-    {{ environment_states(env.values()[0]) }}
-  {%- else %}
-    {%- if env[0] is not string %}
-    #If this is the first iteration of the macro
-katello_create_env_{{ env[0].keys()[0] }}:
-  module.run:
-    - katello.create_environment:
-      - hostname: {{ grains['fqdn'] }}
-      - username: {{ server.admin_user }}
-      - password: {{ server.admin_pass }}
-      - organization: {{ global_org_name[0] }}
-      - environment_name: {{ env[0].keys()[0] }}
-#    - onchanges:
-#      - cmd: katello_clean_yum
+    {%- endif %}
+    - onchanges:
+      - cmd: katello_clean_yum
       {% set _ = global_last_env.pop() %}
       {% set _ = global_last_env.append(env[0].keys()[0]) %}
       {{ environment_states(env[0].values()[0]) }}
-    {%- else %}
-    #if this is the final call of the macro
+  {%- else %}
+  #if this is the final call of the macro
 katello_create_env_{{ env[0] }}:
   module.run:
     - katello.create_environment:
@@ -56,18 +43,17 @@ katello_create_env_{{ env[0] }}:
       - password: {{ server.admin_pass }}
       - organization: {{ global_org_name[0] }}
       - environment_name: {{ env[0] }}
-      {%- if global_last_env[0] != 0 %}
-      #In case there is only 1 environment
+    {%- if global_last_env[0] != 0 %}
+    #In case there is only 1 environment
       - parent_environment: {{ global_last_env[0] }}
     - require:
       - module: katello_create_env_{{ global_last_env[0] }}
-      {%- endif %}
-#    - onchanges:
-#      - cmd: katello_clean_yum
+    {%- endif %}
+    - onchanges:
+      - cmd: katello_clean_yum
       #cleanup for possible future run
       {% set _ = global_last_env.pop() %}
       {% set _ = global_last_env.append(0) %}
-    {%- endif %}
   {%- endif %}
 {% endmacro %}
 
@@ -411,8 +397,12 @@ katello_create_composite_view_{{ view_name }}:
       - module: katello_sync_product_{{ content_view }}
         {%- endfor %}
         {%- if org_data.environments is defined %}
-#    - require_in:
-#      - module: {{ org_data.environments[0].keys()[0] }}
+    - require_in:
+          {%- if org_data.environments[0] is not string %}
+      - module: katello_create_env_{{ org_data.environments[0].keys()[0] }}
+          {%- else %}
+      - module: katello_create_env_{{ org_data.environments[0] }}
+          {%- endif %}
         {%- endif %}
       {%- endfor %}
     {%- endif %}
@@ -427,6 +417,29 @@ katello_create_composite_view_{{ view_name }}:
       {% set _ = global_org_name.pop() %}
       {% set _ = global_org_name.append(org_name) %}
       {{ environment_states(org_data.environments) }}
+    {%- endif %}
+
+    {% if org_data.activation_keys is defined %}
+      {%- for key_name, associations in org_data.activation_keys.iteritems() %}
+katello_create_activation_key_{{ key_name }}:
+  module.run:
+    - katello.create_activation_key:
+      - hostname: {{ grains['fqdn'] }}
+      - username: {{ server.admin_user }}
+      - password: {{ server.admin_pass }}
+      - organization: {{ org_name }}
+      - name: {{ key_name }}
+        {% if associations.view is defined %}
+      - content_view: {{ associations.view }}
+        {%- endif %}
+        {% if associations.environment is defined %}
+      - environment: {{ associations.environment }}
+    - require:
+      - module: katello_create_env_{{ associations.environment }} 
+        {%- endif %}
+#    - onchanges:
+#      - cmd: katello_clean_yum
+      {%- endfor %}
     {%- endif %}
   {%- endfor %}
 {%- endif %}

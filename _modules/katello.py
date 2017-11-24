@@ -8,7 +8,6 @@ An execution module which can manipulate Katello via REST API
 # Import python libs
 from __future__ import absolute_import
 from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.poolmanager import PoolManager
 import json
 import urllib
 import os
@@ -30,17 +29,12 @@ import salt.output
 import salt.exceptions
 
 '''
-    Version: .09
     Todo:
-        * Properly document Inputs and output of each function
         * Add ability to delete OS
         * Revise OS adds
 	* Update media location and org IDs
 '''
 
-
-# Setup the logger
-log = logger.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'katello'
@@ -88,8 +82,8 @@ def check_settings(hostname, username, password,
 
     try:
         response = requests.get('https://' + hostname + uri, auth=HTTPBasicAuth(username, password))
-    except requests.exceptions.ConnectionError as e:
-        return _load_connection_error(hostname, e)
+    except requests.exceptions.ConnectionError as error:
+        return _load_connection_error(hostname, error)
 
     data = _load_response(response)
 
@@ -306,28 +300,27 @@ def add_ldap_source(hostname, username, password,
 #
 #        else:
     response = requests.post('https://' + hostname + '/api/auth_source_ldaps',
-                                     data = json.dumps({'name': ldap_hostname,
-                                                       'host': ldap_hostname,
-                                                       'port': port, 'account': ldap_user,
-                                                       'account_password': ldap_password,
-                                                       'server_type': server_type,
-                                                       'base_dn': urllib.unquote(base_dn),
-                                                       'attr_login': attr_map_login,
-                                                       'attr_firstname': attr_map_given_name,
-                                                       'attr_lastname': attr_map_family_name,
-                                                       'attr_mail': attr_map_email,
-                                                       'attr_photo': attr_map_mugshot,
-                                                       'onthefly_register':
-                                                       automagic_account_creation,
-                                                       'usergroup_sync': usergroup_sync,
-                                                       'tls': tls,
-                                                       'groups_base': urllib.unquote(groups_base),
-                                                       'server_type': server_type,
-                                                       'ldap_filter': ldap_filter}),
-                                     headers = {'Content-Type': 'application/json'},
-                                     auth = HTTPBasicAuth(username, password))
-                                     #Seriously, if you are mad about the arch and hash, stop using
-                                     #old, insecure and outdated crap.
+                             data=json.dumps({'name': ldap_hostname,
+                                              'host': ldap_hostname,
+                                              'port': port, 'account': ldap_user,
+                                              'account_password': ldap_password,
+                                              'server_type': server_type,
+                                              'base_dn': urllib.unquote(base_dn),
+                                              'attr_login': attr_map_login,
+                                              'attr_firstname': attr_map_given_name,
+                                              'attr_lastname': attr_map_family_name,
+                                              'attr_mail': attr_map_email,
+                                              'attr_photo': attr_map_mugshot,
+                                              'onthefly_register': automagic_account_creation,
+                                              'usergroup_sync': usergroup_sync,
+                                              'tls': tls,
+                                              'groups_base': urllib.unquote(groups_base),
+                                              'server_type': server_type,
+                                              'ldap_filter': ldap_filter}),
+                             headers={'Content-Type': 'application/json'},
+                             auth=HTTPBasicAuth(username, password))
+                              #Seriously, if you are mad about the arch and hash, stop using
+                              #old, insecure and outdated crap.
 
     data = _load_response(response)
 
@@ -353,8 +346,9 @@ def upload_rh_subscriptions(hostname, username, password, organization, path):
         raise ValueError("Unable to find organization - check spelling")
 
     response = requests.post('https://' + hostname + '/katello/api/organizations/' +
-                             str(organization_id) + '/subscriptions/upload', files = {'content':
-                             open(path, 'rb')}, auth = HTTPBasicAuth(username, password))
+                             str(organization_id) + '/subscriptions/upload',
+                             files={'content': open(path, 'rb')},
+                             auth=HTTPBasicAuth(username, password))
 
     data = _load_response(response)
 
@@ -394,10 +388,10 @@ def load_gpg_key(hostname, username, password, organization, key_url):
     response = requests.post('https://' + hostname +
                              '/katello/api/gpg_keys',
                              data=json.dumps({'organization_id': organization_id, 'name':
-                                             os.path.basename(key_url),
-                                             'content': data['content']}),
-                             headers = {'Content-Type': 'application/json'},
-                             auth = HTTPBasicAuth(username, password))
+                                              os.path.basename(key_url),
+                                              'content': data['content']}),
+                             headers={'Content-Type': 'application/json'},
+                             auth=HTTPBasicAuth(username, password))
 
     data = _load_response(response)
 
@@ -443,26 +437,28 @@ def create_sync_plan(hostname, username, password, organization, frequency):
         raise ValueError(str(data['code']) + " - " + json.dumps(data['content']))
 
 def create_product(hostname, username, password, organization, product_name, *args, **kwargs):
-    sync_plan=kwargs.get('sync_plan', None)
- 
+
+    sync_plan = kwargs.get('sync_plan', None)
+
     organizations = check_settings(hostname, username, password, "/katello/api/organizations")
     for group in organizations:
         if group['name'] == organization:
             organization_id = group['id']
     if 'organization_id' not in locals():
         raise ValueError("Unable to find organization - check spelling")
-    
+
     if sync_plan == None:
         response = requests.post('https://' + hostname +
                                  '/katello/api/products',
                                  data=json.dumps({'organization_id': organization_id, 'name':
-                                                 product_name, 'description': product_name,
-                                                 'label': product_name.replace(" ", "_")}),
+                                                  product_name, 'description': product_name,
+                                                  'label': product_name.replace(" ", "_")}),
                                  headers={'Content-Type': 'application/json'},
                                  auth=HTTPBasicAuth(username, password))
     else:
         sync_plans = check_settings(hostname, username, password,
-                              "/katello/api/sync_plans?organization_id=" + str(organization_id))
+                                    "/katello/api/sync_plans?organization_id="
+                                    + str(organization_id))
         for plan in sync_plans:
             if plan['interval'] == sync_plan:
                 sync_plan_id = plan['id']
@@ -470,9 +466,9 @@ def create_product(hostname, username, password, organization, product_name, *ar
         response = requests.post('https://' + hostname +
                                  '/katello/api/products',
                                  data=json.dumps({'organization_id': organization_id, 'name':
-                                                 product_name, 'description': product_name,
-                                                 'label': product_name.replace(" ", "_"),
-                                                 'sync_plan_id': sync_plan_id}),
+                                                  product_name, 'description': product_name,
+                                                  'label': product_name.replace(" ", "_"),
+                                                  'sync_plan_id': sync_plan_id}),
                                  headers={'Content-Type': 'application/json'},
                                  auth=HTTPBasicAuth(username, password))
 
@@ -524,14 +520,18 @@ def create_repo(hostname, username, password,
     else:
         response = requests.post('https://' + hostname +
                                  '/katello/api/repositories',
-                                 data=json.dumps({'name': repo_name, 'label':
-                                 repo_name.replace(" ", "_"), 'product_id': product_id, 
-                                 'url': repo_url, 'content_type': content_type, 
-                                 'checksum_type': 'sha256', 'download_policy': download_policy,
-                                 'mirror_on_sync': mirror_on_sync, 'verify_ssl': verify_ssl,
-                                 'gpg_key_id': gpg_id,}),
-                                 headers = {'Content-Type': 'application/json'},
-                                 auth = HTTPBasicAuth(username, password))
+                                 data=json.dumps({'name': repo_name,
+                                                  'label': repo_name.replace(" ", "_"),
+                                                  'product_id': product_id,
+                                                  'url': repo_url,
+                                                  'content_type': content_type,
+                                                  'checksum_type': 'sha256',
+                                                  'download_policy': download_policy,
+                                                  'mirror_on_sync': mirror_on_sync,
+                                                  'verify_ssl': verify_ssl,
+                                                  'gpg_key_id': gpg_id,}),
+                                 headers={'Content-Type': 'application/json'},
+                                 auth=HTTPBasicAuth(username, password))
 
     data = _load_response(response)
 
@@ -544,8 +544,8 @@ def create_repo(hostname, username, password,
     else:
         raise ValueError(str(data['code']) + " - " + json.dumps(data['content']))
 
-def create_content_view (hostname, username, password, organization,
-                         content_view_name, content_repos):
+def create_content_view(hostname, username, password, organization,
+                        content_view_name, content_repos):
 
     organizations = check_settings(hostname, username, password, "/katello/api/organizations")
     for group in organizations:
@@ -565,21 +565,21 @@ def create_content_view (hostname, username, password, organization,
 
     if 'sync_plan' in content_repos.keys():
         if len(repo_ids)+1 != len(content_repos.values()):
-            raise ValueError('Unable to find repo in provided list (it doesn\'t exist yet.)' 
+            raise ValueError('Unable to find repo in provided list (it doesn\'t exist yet.)'
                              + ' or too many repos found (make sure you don\'t have the same'
-                             + ' repo in two products. Use a composite view instead.)') 
+                             + ' repo in two products. Use a composite view instead.)')
     else:
         if len(repo_ids) != len(content_repos.values()):
-            raise ValueError('Unable to find repo in provided list (it doesn\'t exist yet.)' 
+            raise ValueError('Unable to find repo in provided list (it doesn\'t exist yet.)'
                              + ' or too many repos found (make sure you don\'t have the same'
-                             + ' repo in two products. Use a composite view instead.)') 
+                             + ' repo in two products. Use a composite view instead.)')
 
     response = requests.post('https://' + hostname +
                              '/katello/api/content_views',
                              data=json.dumps({'organization_id': organization_id, 'name':
-                                             content_view_name, 'description': content_view_name,
-                                             'label': content_view_name.replace(" ", "_"),
-                                             'repository_ids': repo_ids}),
+                                              content_view_name, 'description': content_view_name,
+                                              'label': content_view_name.replace(" ", "_"),
+                                              'repository_ids': repo_ids}),
                              headers={'Content-Type': 'application/json'},
                              auth=HTTPBasicAuth(username, password))
 
@@ -592,8 +592,8 @@ def create_content_view (hostname, username, password, organization,
     else:
         raise ValueError(str(data['code']) + " - " + json.dumps(data['content']))
 
-def create_composite_view (hostname, username, password, organization,
-                         composite_view_name, content_views):
+def create_composite_view(hostname, username, password, organization,
+                          composite_view_name, content_views):
 
     organizations = check_settings(hostname, username, password, "/katello/api/organizations")
     for group in organizations:
@@ -604,19 +604,21 @@ def create_composite_view (hostname, username, password, organization,
 
     content_view_ids = []
     content_views = check_settings(hostname, username, password,
-                           "/katello/api/repositories?organization_id=" + str(organization_id))
+                                   "/katello/api/repositories?organization_id=" +
+                                   str(organization_id))
     for view in content_views:
         content_view_ids.append(view['id'])
 
     if len(content_view_ids) != len(content_views):
-	raise ValueError('Unable to find the listed content_views')
+        raise ValueError('Unable to find the listed content_views')
 
     response = requests.post('https://' + hostname +
                              '/katello/api/content_views',
                              data=json.dumps({'organization_id': organization_id, 'name':
-                                             composite_view_name, 'description': composite_view_name,
-                                             'label': composite_view_name.replace(" ", "_"),
-                                             'content_ids': content_view_ids, 'composite': 1}),
+                                              composite_view_name,
+                                              'description': composite_view_name,
+                                              'label': composite_view_name.replace(" ", "_"),
+                                              'content_ids': content_view_ids, 'composite': 1}),
                              headers={'Content-Type': 'application/json'},
                              auth=HTTPBasicAuth(username, password))
 
@@ -648,8 +650,8 @@ def sync_product_repos(hostname, username, password,
     if 'product_id' not in locals():
         raise ValueError("Unable to find product - check spelling")
     else:
-        response = requests.post('https://' + hostname + '/katello/api/products/' + str(product_id) +
-                                 '/sync', data=json.dumps({'id': product_id}),
+        response = requests.post('https://' + hostname + '/katello/api/products/' +
+                                 str(product_id) + '/sync', data=json.dumps({'id': product_id}),
                                  headers={'Content-Type': 'application/json'},
                                  auth=HTTPBasicAuth(username, password))
 
@@ -669,7 +671,7 @@ def sync_product_repos(hostname, username, password,
         raise ValueError(str(data['code']) + ": " + json.dumps(data['content']))
 
 def create_environment(hostname, username, password, organization,
-                        environment_name, *args, **kwargs):
+                       environment_name, *args, **kwargs):
     parent_environment = kwargs.get('parent_environment', 'Library')
 
     organizations = check_settings(hostname, username, password, "/katello/api/organizations")
@@ -679,19 +681,22 @@ def create_environment(hostname, username, password, organization,
     if 'organization_id' not in locals():
         raise ValueError("Unable to find organization - check spelling")
 
-    existing_environments = check_settings(hostname, username, password, "/katello/api/environments")
+    existing_environments = check_settings(hostname, username, password,
+                                           "/katello/api/environments")
     for env in existing_environments:
         if env['name'] == parent_environment:
             parent_id = env['id']
     if 'parent_id' not in locals():
         raise ValueError("Unable to find parent environment")
 
-    response = requests.post('https://' + hostname + '/katello/api/activation_keys', 
-                             data=json.dumps({'organization_id': organization_id, 
+    response = requests.post('https://' + hostname + '/katello/api/environments',
+                             data=json.dumps({'organization_id': organization_id,
                                               'name': environment_name,
                                               'prior_id': parent_id}),
                              headers={'Content-Type': 'application/json'},
                              auth=HTTPBasicAuth(username, password))
+
+    data = _load_response(response)
 
     if data['code'] == 200:
         return data
@@ -714,15 +719,78 @@ def create_activation_key(hostname, username, password, organization,
     if 'organization_id' not in locals():
         raise ValueError("Unable to find organization - check spelling")
 
-    response = requests.post('https://' + hostname + '/katello/api/activation_keys', 
-                             data=json.dumps({'organization_id': organization_id, 'name': name}),
+    post_data = {'organization_id': organization_id, 'name': name}
+
+    if environment != None:
+        environments = check_settings(hostname, username, password, "/katello/api/environments")
+        for env in environments:
+            if env['name'] == environment:
+                environment_id = env['id']
+
+        if 'environment_id' not in locals():
+            raise ValueError("Unable to find Lifecycle Environment " +
+                             "to associate to activaion key - check spelling")
+
+        post_data['environment_id'] = environment_id
+
+    if content_view != None:
+        content_views = check_settings(hostname, username, password, "/katello/api/content_views")
+        for view in content_views:
+            if view['name'] == content_view:
+                content_view_id = view['id']
+
+        if 'content_view_id' not in locals():
+            raise ValueError("Unable to find Content View to associate " +
+                             "to activaion key - check spelling")
+
+        post_data['content_view_id'] = content_view_id
+
+    response = requests.post('https://' + hostname + '/katello/api/activation_keys',
+                             data=json.dumps(post_data),
                              headers={'Content-Type': 'application/json'},
                              auth=HTTPBasicAuth(username, password))
+
+    data = _load_response(response)
 
     if data['code'] == 200:
         return data
     elif data['code'] == 422:
-        return 'An activation key with this name already exists'
+        if ("Validation failed: Content view '" + content_view  +"' is not in environment"
+                in data['content']['displayMessage']):
+            raise ValueError("Content view is not in Lifecycle Environment. " +
+                             "Has it been promoted to this environment yet?")
+        else:
+            return 'An activation key with this name already exists ' + json.dumps(data['content'])
     else:
         raise ValueError(str(data['code']) + " - " + json.dumps(data['content']))
 
+def create_compute(hostname, username, password,
+                   name, provider, *args, **kwargs):
+    location             = kwargs.get('location', None)
+    organization         = kwargs.get('organization', None)
+    url                  = kwargs.get('url', None)
+    user                 = kwargs.get('user', None)
+    password             = kwargs.get('password', None)
+    datacenter           = kwargs.get('datacenter', None)           # OVirt, vmware
+    region               = kwargs.get('region', None)               # Amazon EC2
+    tenant               = kwargs.get('tenant', None)               # openstack
+    server               = kwargs.get('server', None)               # vmware
+    set_console_password = kwargs.get('set_console_password', True) # vmware
+    display_type         = kwargs.get('display_type', None)
+    caching_enabled      = kwargs.get('caching_enabled', True)      # vmware
+
+    post_data = {'name': name, 'provider': provider}
+
+    response = requests.post('https://' + hostname + '/api/compute_resources',
+                             data=json.dumps(post_data),
+                             headers={'Content-Type': 'application/json'},
+                             auth=HTTPBasicAuth(username, password))
+
+    data = _load_response(response)
+
+    if data['code'] == 200:
+        return data
+    elif data['code'] == 422:
+        return 'An activation key with this name already exists ' + json.dumps(data['content'])
+    else:
+        raise ValueError(str(data['code']) + " - " + json.dumps(data['content']))
