@@ -160,12 +160,6 @@ katello_answers:
     - template: jinja
     - onchanges: 
       - cmd: katello_clean_yum
-#Fix for http://projects.theforeman.org/issues/20055
-/opt/theforeman/tfm/root/usr/share/gems/gems/foreman_salt-8.0.2/db/seeds.d/75-salt_seeds.rb:
-  file.managed:
-    - source: salt://katello/files/75-salt_seeds.rb
-    - require:
-       - pkg: katello_server_pkgs    
 katello_install:
   cmd.run:
 {%- if grains.get('current_tty', None) == None %}
@@ -187,6 +181,13 @@ katello_reset_pass:
     - require:
       - cmd: katello_install
       - firewalld: public
+    - onchanges:
+      - cmd: katello_clean_yum
+katello_prep_client_attachments:
+  cmd.run:
+    - name: curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/$( curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/ | grep subscription-manager-[1-9] | awk -F\" '{print $2}' ) -o /var/www/html/pub/subscription-manager.el7.centos.x86_64.rpm
+    - require:
+      - cmd: katello_install
     - onchanges:
       - cmd: katello_clean_yum
 mkdir -p /etc/slik:

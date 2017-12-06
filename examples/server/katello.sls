@@ -1,7 +1,7 @@
 katello:
   server:
     admin_user: admin
-    admin_pass: YEYorBtB6ZP1
+    admin_pass: UtjDf83OJCVn
     locations:
       - podunk
 #    rc: true
@@ -86,3 +86,55 @@ katello:
             environment: Prod
           CentOS 7:
             view: CentOS 7 - EPEL
+
+### Compute resources are clouds or in-house clusters that you can deploy hosts to
+### This works with Libvirt, Ovirt, EC2, Vmware, Openstack, Rackspace and GCE
+
+    compute: 
+      Google Cloud: 
+        - provider: GCE
+#      KVM:
+#        - provider: Ovirt
+#      Xen:
+#        - provider: Libvirt
+#      Amazon:
+#        - provider: EC2
+#        - user:
+#        # this is actually your EC2 Key, but not sure if secret key or Access key 
+#        - password:
+#        - region: us-west-2
+#      VMWare:
+#        - provider: Vmware
+#        # This can also be the actual service_account and service_account_password above if omitted 
+#        - user: service_account
+#        - password: k.djdnbglaf
+#        - datacenter: HQ
+#        - server: vcenter.example.com
+#        # not required; sets a randomly generated password on the display connection
+#        - set_console_password: True
+#        # not required; Caches slow calls to VMWare to speed up page rendering
+#        - caching_enabled: True
+#      OpenStack:
+#        - provider: Openstack
+#      Rackspace:
+#        - provider: Rackspace       
+#
+#    elif provider == 'Libvirt':
+#        post_data['url'] = url
+#        post_data['set_console_password'] = set_console_password
+#        post_data['display_type'] = display_type
+#
+#    elif provider == 'Ovirt':
+#        post_data['url'] = url
+#        post_data['user'] = user
+#        post_data['password'] = password
+#        post_data['datacenter'] = datacenter
+#
+#    elif provider == 'Openstack':
+#        post_data['url'] = url
+#        post_data['user'] = user
+#        post_data['password'] = password
+#        post_data['tenant'] = tenant
+#
+#    elif provider == 'Rackspace':
+#        post_data['url'] = url

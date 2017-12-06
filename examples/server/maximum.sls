@@ -121,3 +121,22 @@ katello:
        activation_keys:
          Fedora:
            view: Fedora
+
+### Compute resources are clouds or in-house clusters that you can deploy hosts to
+### This works with Libvirt, Ovirt, EC2, Vmware, Openstack, Rackspace and GCE
+
+    compute: 
+      Google Cloud: 
+        - provider: GCE
+      KVM:
+        - provider: Ovirt
+      Xen:
+        - provider: Libvirt
+      Amazon:
+        - provider: EC2
+      VMWare:
+        - provider: Vmware
+      OpenStack:
+        - provider: Openstack
+      Rackstapce:
+        - provider: Rackspace

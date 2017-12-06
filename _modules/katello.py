@@ -7,12 +7,11 @@ An execution module which can manipulate Katello via REST API
 
 # Import python libs
 from __future__ import absolute_import
-from requests.adapters import HTTPAdapter
 import json
 import urllib
 import os
 import time
-import logging as logger
+#import logging as logger
 
 # Import third party libs
 try:
@@ -29,10 +28,10 @@ import salt.output
 import salt.exceptions
 
 '''
-    Todo:
-        * Add ability to delete OS
-        * Revise OS adds
-	* Update media location and org IDs
+Todo:
+ * Add ability to delete OS
+ * Revise OS adds
+ * Update media location and org IDs
 '''
 
 
@@ -177,7 +176,7 @@ def del_media(hostname, username, password, name):
 
             else:
                 raise ValueError(str(data['code']) + ": " + json.dumps(data['content']))
-    if data == None:
+    if data is None:
         return "Deleted"
 
 def add_os(hostname, username, password, name,
@@ -203,17 +202,19 @@ def add_os(hostname, username, password, name,
     '''
 
     oses = check_settings(hostname, username, password, '/api/operatingsystems')
-    for os in oses:
-        if os['name'] == name:
-            if os['major'] != major_ver or os['minor'] != minor_ver or os['family'] != 'os_family':
+    for op_sys in oses:
+        if op_sys['name'] == name:
+            if (op_sys['major'] != major_ver or op_sys['minor'] != minor_ver 
+                or op_sys['family'] != 'os_family'):
+
                 response = requests.delete('https://' + hostname + '/api/operatingsystems/%s' %
-                                           os['id'], auth=HTTPBasicAuth(username, password))
+                                           op_sys['id'], auth=HTTPBasicAuth(username, password))
                 data = _load_response(response)
 
                 if data['code'] != 200:
                     raise ValueError(str(data['code']) + ": " + json.dumps(data['content']))
-        if data == None:
-            spoof = {'code': 200, 'content': os}
+        if data is None:
+            spoof = {'code': 200, 'content': op_sys}
             return spoof
 
 
@@ -315,7 +316,6 @@ def add_ldap_source(hostname, username, password,
                                               'usergroup_sync': usergroup_sync,
                                               'tls': tls,
                                               'groups_base': urllib.unquote(groups_base),
-                                              'server_type': server_type,
                                               'ldap_filter': ldap_filter}),
                              headers={'Content-Type': 'application/json'},
                              auth=HTTPBasicAuth(username, password))
@@ -326,6 +326,8 @@ def add_ldap_source(hostname, username, password,
 
     if data['code'] == 201:
         return data
+    elif data['code'] == 422:
+        return 'This LDAP source already exists'
     else:
         raise ValueError(str(data['code']) + ": " + json.dumps(data['content']))
 
@@ -429,10 +431,8 @@ def create_sync_plan(hostname, username, password, organization, frequency):
 
     if data['code'] == 200:
         return data
-
     elif data['code'] == 422:
         return 'A ' + frequency + ' sync plan already exists'
-
     else:
         raise ValueError(str(data['code']) + " - " + json.dumps(data['content']))
 
@@ -447,7 +447,7 @@ def create_product(hostname, username, password, organization, product_name, *ar
     if 'organization_id' not in locals():
         raise ValueError("Unable to find organization - check spelling")
 
-    if sync_plan == None:
+    if sync_plan is None:
         response = requests.post('https://' + hostname +
                                  '/katello/api/products',
                                  data=json.dumps({'organization_id': organization_id, 'name':
@@ -776,10 +776,47 @@ def create_compute(hostname, username, password,
     tenant               = kwargs.get('tenant', None)               # openstack
     server               = kwargs.get('server', None)               # vmware
     set_console_password = kwargs.get('set_console_password', True) # vmware
-    display_type         = kwargs.get('display_type', None)
+    display_type         = kwargs.get('display_type', None)	    # LibVirt
     caching_enabled      = kwargs.get('caching_enabled', True)      # vmware
 
     post_data = {'name': name, 'provider': provider}
+
+    if provider == 'Vmware':
+        post_data['user'] = user
+        post_data['password'] = password
+        post_data['datacenter'] = datacenter
+        post_data['server'] = server
+        post_data['set_console_password'] = set_console_password
+        post_data['caching_enabled'] = caching_enabled
+
+    elif provider == 'EC2':
+        post_data['user'] = user
+        post_data['password'] = password
+        post_data['region'] = region
+
+    elif provider == 'Libvirt':
+        post_data['url'] = url
+        post_data['set_console_password'] = set_console_password
+        post_data['display_type'] = display_type
+
+    elif provider == 'Ovirt':
+        post_data['url'] = url
+        post_data['user'] = user
+        post_data['password'] = password
+        post_data['datacenter'] = datacenter
+
+    elif provider == 'Openstack':
+        post_data['url'] = url
+        post_data['user'] = user
+        post_data['password'] = password
+        post_data['tenant'] = tenant
+
+    elif provider == 'Rackspace':
+        post_data['url'] = url
+
+    elif provider != 'GCE':
+        raise ValueError('Provider must be one of type:\n' +
+                         '"Libvirt", "Ovirt", "EC2", "Vmware", "Openstack", "Rackspace" or "GCE"')
 
     response = requests.post('https://' + hostname + '/api/compute_resources',
                              data=json.dumps(post_data),
@@ -791,6 +828,6 @@ def create_compute(hostname, username, password,
     if data['code'] == 200:
         return data
     elif data['code'] == 422:
-        return 'An activation key with this name already exists ' + json.dumps(data['content'])
+        return 'An Compute Provider with this name already exists ' + json.dumps(data['content'])
     else:
         raise ValueError(str(data['code']) + " - " + json.dumps(data['content']))
