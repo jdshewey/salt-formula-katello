@@ -6,6 +6,13 @@ katello_consumer_install:
       - katello-ca-consumer-slik01.example.com: https://{{ grains.master }}/pub/katello-ca-consumer-latest.noarch.rpm
       - subscription-manager: https://{{ grains.master }}/pub/subscription-manager.el7.centos.x86_64.rpm
     - allow_updates: True
+katello_clean_subscriptions:
+  cmd.run:
+    - name: subscription-manager clean
+    - require:
+      - pkg: katello_consumer_install
+    - onchanges:
+      - pkg: katello_consumer_install
 katello_activate_client:
   cmd.run: 
 {%- for company_name, activation_keys in client.items() %} #There should only be one key per file
@@ -19,8 +26,20 @@ katello_activate_client:
 {%- endfor %}
     - require:
       - pkg: katello_consumer_install
+      - cmd: katello_clean_subscriptions
+    - onchanges:
+      - pkg: katello_consumer_install
+katello_agent_install:
+  pkg.latest:
+    - name: katello-agent 
+    - require:
+      - pkg: katello_consumer_install
+      - cmd: katello_clean_subscriptions
+      - cmd: katello_activate_client
     - onchanges:
       - pkg: katello_consumer_install
 katello_update_host_info:
   cmd.run:
     - name: katello-tracer-upload
+    - require:
+      - pkg: katello_agent_install
