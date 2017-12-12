@@ -1,16 +1,4 @@
-{%- load_yaml as client_defaults %}
-RedHat:
-  pkgs:
-  {% if grains.os == 'CentOS' %}
-  - katello 
-  - rubygem-smart_proxy_salt 
-  {% else %}
-  - katello 
-  - rubygem-smart_proxy_salt 
-  {% endif %}
-{%- endload %}
-
-{%- set client = salt['grains.filter_by'](client_defaults, merge=salt['pillar.get']('katello:client')) %}
+{%- set client = salt['grains.filter_by']( {}, merge=salt['pillar.get']('katello:client')) %}
 
 {%- load_yaml as server_defaults %}
 RedHat:
@@ -43,3 +31,4 @@ RedHat:
 {%- endload %}
 
 {%- set server = salt['grains.filter_by'](server_defaults, merge=salt['pillar.get']('katello:server')) %}
+

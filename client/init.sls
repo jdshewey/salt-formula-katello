@@ -13,15 +13,15 @@ katello_clean_subscriptions:
       - pkg: katello_consumer_install
     - onchanges:
       - pkg: katello_consumer_install
-katello_activate_client:
+{%- for company_name, activation_keys in client.items() %}
+katello_activate_client_{{ company_name }}:
   cmd.run: 
-{%- for company_name, activation_keys in client.items() %} #There should only be one key per file
-  {%- if client.activation_key is defined %}
-    - name: subscription-manager register --activationkey="{{ client.items()[0][1].activation_key.items()[0][0] }}" --org "{{ company_name }}" --force
-  {%- elif grains['master'] == grains['fqdn'] %}
-    - name: subscription-manager register --activationkey="{{ client.items()[0][1].server_activation_key.items()[0][0] }}" --org "{{ client.items()[0][0] }}" --force
+  {%- if grains['master'] == grains['fqdn'] %}
+    - name: subscription-manager register --activationkey="{{ activation_keys.server_activation_key.keys()[0] }}" --org "{{ company_name }}" --force
+  {%- elif activation_keys.activation_key is defined %}
+    - name: subscription-manager register --activationkey="{{ activation_keys.activation_key.keys()[0] }}" --org "{{ company_name }}" --force
   {%- else %}
-    - name: subscription-manager register --activationkey="{{ cleint.items()[0][1].default_activation_key.items()[0][0] }}" --org "{{ company_name }}" --force
+    - name: subscription-manager register --activationkey="{{ activation_keys.default_activation_key.keys()[0] }}" --org "{{ company_name }}" --force
   {%- endif %}
 {%- endfor %}
     - require:
