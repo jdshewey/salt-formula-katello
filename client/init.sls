@@ -35,7 +35,8 @@ katello_agent_install:
     - require:
       - pkg: katello_consumer_install
       - cmd: katello_clean_subscriptions
-      - cmd: katello_activate_client
+      - cmd: katello_activate_client_{{ company_name }}
+
     - onchanges:
       - pkg: katello_consumer_install
 katello_update_host_info:
