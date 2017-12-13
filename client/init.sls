@@ -23,7 +23,6 @@ katello_activate_client_{{ company_name }}:
   {%- else %}
     - name: subscription-manager register --activationkey="{{ activation_keys.default_activation_key.keys()[0] }}" --org "{{ company_name }}" --force
   {%- endif %}
-{%- endfor %}
     - require:
       - pkg: katello_consumer_install
       - cmd: katello_clean_subscriptions
@@ -36,7 +35,7 @@ katello_agent_install:
       - pkg: katello_consumer_install
       - cmd: katello_clean_subscriptions
       - cmd: katello_activate_client_{{ company_name }}
-
+{%- endfor %}
     - onchanges:
       - pkg: katello_consumer_install
 katello_update_host_info:
