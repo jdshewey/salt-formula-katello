@@ -3,8 +3,8 @@ katello_consumer_install:
   pkg.installed:
     - sources:
 #Located at /var/www/html/pub/
-      - katello-ca-consumer-{{ grains.master }}: https://{{ grains.master }}/pub/katello-ca-consumer-latest.noarch.rpm
-      - subscription-manager: https://{{ grains.master }}/pub/subscription-manager.el7.centos.x86_64.rpm
+      - katello-ca-consumer-{{ grains.master }}: http://{{ grains.master }}/pub/katello-ca-consumer-latest.noarch.rpm
+      - subscription-manager: http://{{ grains.master }}/pub/subscription-manager.el7.centos.x86_64.rpm
     - allow_updates: True
 katello_clean_subscriptions:
   cmd.run:
