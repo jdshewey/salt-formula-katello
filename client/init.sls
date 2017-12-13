@@ -4,7 +4,11 @@ katello_consumer_install:
     - sources:
 #Located at /var/www/html/pub/
       - katello-ca-consumer-{{ grains.master }}: http://{{ grains.master }}/pub/katello-ca-consumer-latest.noarch.rpm
+{%- if grains['osmajorrelease'] == 7 %}
       - subscription-manager: http://{{ grains.master }}/pub/subscription-manager.el7.centos.x86_64.rpm
+{%- else %}
+      - subscription-manager: http://{{ grains.master }}/pub/subscription-manager.el6.centos.x86_64.rpm
+{%- endif %}
     - allow_updates: True
 katello_clean_subscriptions:
   cmd.run:
