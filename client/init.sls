@@ -43,3 +43,9 @@ katello_update_host_info:
     - name: katello-tracer-upload
     - require:
       - pkg: katello_agent_install
+katello_gofer
+  service.running:
+    - name: goferd
+    - enable: True
+    - require:
+      - pkg: katello_agent_install
