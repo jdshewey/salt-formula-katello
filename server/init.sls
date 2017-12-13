@@ -165,6 +165,8 @@ katello_answers:
     - source: salt://katello/files/75-salt_seeds.rb
     - require:
        - pkg: katello_server_pkgs 
+    - onchanges: 
+      - cmd: katello_clean_yum
 katello_install:
   cmd.run:
 {%- if grains.get('current_tty', None) == None %}
