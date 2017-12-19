@@ -190,13 +190,21 @@ katello_reset_pass:
       - firewalld: public
     - onchanges:
       - cmd: katello_clean_yum
-katello_prep_client_attachments:
+katello_prep_client_attachments_7:
   cmd.run:
-    - name: curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/$( curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/ | grep subscription-manager-[1-9] | awk -F\" '{print $2}' ) -o /var/www/html/pub/subscription-manager.el7.centos.x86_64.rpm
-#    - require:
-#      - cmd: katello_install
-#    - onchanges:
-#      - cmd: katello_clean_yum
+    - name: curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/$( curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/ | grep subscription-manager-[1-9] | awk -f\" '{print $2}' ) -o /var/www/html/pub/subscription-manager.el7.centos.x86_64.rpm
+    - require:
+      - cmd: katello_install
+    - onchanges:
+      - cmd: katello_clean_yum
+katello_prep_client_attachments_7:
+  cmd.run:
+#pinning to such a specific version is suboptimal. Such is life.
+    - name: curl -s https://copr-be.cloud.fedoraproject.org/results/dgoodwin/subscription-manager/epel-6-x86_64/00273890-subscription-manager/subscription-manager-1.17.6-1.el6.x86_64.rpm -o /var/www/html/pub/subscription-manager.el6.centos.x86_64.rpm
+    - require:
+      - cmd: katello_install
+    - onchanges:
+      - cmd: katello_clean_yum
 mkdir -p /etc/slik:
   cmd.run:
     - require:

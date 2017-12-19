@@ -26,9 +26,6 @@ katello:
             Katello:
               url: https://fedorapeople.org/groups/katello/releases/yum/latest/katello/el7/x86_64/
               gpg_key: https://raw.githubusercontent.com/Katello/katello.org/master/gpg/RPM-GPG-KEY-katello-2015.gpg
-            Katello Client:
-              url: https://fedorapeople.org/groups/katello/releases/yum/latest/client/el7/x86_64/
-              gpg_key: https://raw.githubusercontent.com/Katello/katello.org/master/gpg/RPM-GPG-KEY-katello-2015.gpg
             Candlepin:
               url: https://fedorapeople.org/groups/katello/releases/yum/latest/candlepin/el7/x86_64/
               gpg_key: https://raw.githubusercontent.com/Katello/katello.org/master/gpg/RPM-GPG-KEY-katello-2015.gpg
@@ -41,7 +38,11 @@ katello:
             Puppet:
               url: https://yum.puppetlabs.com/el/7/PC1/x86_64/
               gpg_key: https://yum.puppetlabs.com/RPM-GPG-KEY-puppet
-          EPEL:
+          Katello Client 7:
+            Katello Client 7:
+              url: https://fedorapeople.org/groups/katello/releases/yum/latest/client/el7/x86_64/
+              gpg_key: https://raw.githubusercontent.com/Katello/katello.org/master/gpg/RPM-GPG-KEY-katello-2015.gpg
+          EPEL 7:
             sync_plan: daily
             EPEL:
               url: https://mirrors.kernel.org/fedora-epel/7/x86_64/
@@ -59,16 +60,18 @@ katello:
               gpg_key: https://mirrors.kernel.org/centos/7/os/x86_64/RPM-GPG-KEY-CentOS-7
 
 ####### Every Product automatically gets a matchomg Content View. Composite Views are made up
-####### of two or more Content Views.
+####### of two or more Content Views. Note CentOS 7 Client. Both EPEL and the Katello Client 
+####### repos are needed for Katello clients to properly attach.
 
         composite_views:
           SLIK:
             - Katello
             - EPEL
             - CentOS 7
-          CentOS 7 - EPEL:
+          CentOS 7 Client:
             - CentOS 7
-            - EPEL
+            - EPEL 7
+            - Katello Client 7
 
 ####### Content Views are versioned and released/promoted to Lifecycle Environments.
 

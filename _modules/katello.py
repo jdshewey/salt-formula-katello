@@ -603,12 +603,13 @@ def create_composite_view(hostname, username, password, organization,
         raise ValueError("Unable to find organization - check spelling")
 
     content_view_ids = []
-    content_views = check_settings(hostname, username, password,
-                                   "/katello/api/repositories?organization_id=" +
+    existing_content_views = check_settings(hostname, username, password,
+                                   "/katello/api/content_views?organization_id=" +
                                    str(organization_id))
-    for view in content_views:
-        content_view_ids.append(view['id'])
 
+    for view in existing_content_views:
+        if view['name'] in content_views: 
+          content_view_ids.append({"latest": 1, "content_view_id": view['id']})
     if len(content_view_ids) != len(content_views):
         raise ValueError('Unable to find the listed content_views')
 
@@ -618,14 +619,27 @@ def create_composite_view(hostname, username, password, organization,
                                               composite_view_name,
                                               'description': composite_view_name,
                                               'label': composite_view_name.replace(" ", "_"),
-                                              'content_ids': content_view_ids, 'composite': 1}),
+                                              'composite': 1}),
                              headers={'Content-Type': 'application/json'},
                              auth=HTTPBasicAuth(username, password))
 
     data = _load_response(response)
 
     if data['code'] == 200:
-        return data
+        response = requests.put('https://' + hostname +
+                                 '/katello/api/content_views/' + str(data['content']['id']) + 
+                                 '/content_view_components/add',
+                                 data=json.dumps({'components': content_view_ids }),
+                                 headers={'Content-Type': 'application/json'},
+                                 auth=HTTPBasicAuth(username, password))
+
+        data = _load_response(response)
+
+        if data['code'] == 200:
+            return data
+        else:
+            raise ValueError(str(data['code']) + " - " + json.dumps(data['content']))
+
     elif data['code'] == 422:
         return 'A product with this name already exists'
     else:

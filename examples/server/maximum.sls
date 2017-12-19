@@ -38,9 +38,6 @@ katello:
             Katello:
               url: https://fedorapeople.org/groups/katello/releases/yum/latest/katello/el7/x86_64/
               gpg_key: https://www.katello.org/gpg/RPM-GPG-KEY-katello-2015.gpg
-            Katello Client:
-              url: https://fedorapeople.org/groups/katello/releases/yum/latest/client/el7/x86_64/
-              gpg_key: https://www.katello.org/gpg/RPM-GPG-KEY-katello-2015.gpg
             Candlepin:
               url: https://fedorapeople.org/groups/katello/releases/yum/latest/candlepin/el7/x86_64/
               gpg_key: https://www.katello.org/gpg/RPM-GPG-KEY-katello-2015.gpg
@@ -52,8 +49,12 @@ katello:
               gpg_key: https://repo.saltstack.com/yum/redhat/7/x86_64/latest/SALTSTACK-GPG-KEY.pub
             Puppet:
               url: https://yum.puppetlabs.com/el/7/PC1/x86_64/
-              gpg_key: https://yum.puppetlabs.com/RPM-GPG-KEY-puppet
-          EPEL:
+              gpg_key: https://yum.puppetlabs.com/RPM-GPG-KEY-puppet\
+          Katello Client 7:
+            Katello Client 7:
+              url: https://fedorapeople.org/groups/katello/releases/yum/latest/client/el7/x86_64/
+              gpg_key: https://www.katello.org/gpg/RPM-GPG-KEY-katello-2015.gpg
+          EPEL 7:
             sync_plan: weekly
             EPEL:
               url: https://mirrors.kernel.org/fedora-epel/7/x86_64/
@@ -70,17 +71,41 @@ katello:
               url: https://mirrors.kernel.org/centos/7/updates/x86_64/
               gpg_key: https://mirrors.kernel.org/centos/7/os/x86_64/RPM-GPG-KEY-CentOS-7
 
+          Katello Client 6:
+            Katello Client 6:
+              url: https://fedorapeople.org/groups/katello/releases/yum/latest/client/el6/x86_64/
+              gpg_key: https://www.katello.org/gpg/RPM-GPG-KEY-katello-2015.gpg
+          EPEL 6:
+            sync_plan: weekly
+            EPEL:
+              url: https://mirrors.kernel.org/fedora-epel/6/x86_64/
+              gpg_key: https://mirrors.kernel.org/fedora-epel/RPM-GPG-KEY-EPEL-6
+          CentOS 6:
+            sync_plan: hourly
+            CentOS 7 Base:
+              url: https://mirrors.kernel.org/centos/7/os/x86_64/
+              gpg_key: https://mirrors.kernel.org/centos/7/os/x86_64/RPM-GPG-KEY-CentOS-7
+            CentOS 7 Extras:
+              url: https://mirrors.kernel.org/centos/7/extras/x86_64/
+              gpg_key: https://mirrors.kernel.org/centos/7/os/x86_64/RPM-GPG-KEY-CentOS-7
+            CentOS 7 Updates:
+              url: https://mirrors.kernel.org/centos/7/updates/x86_64/
+              gpg_key: https://mirrors.kernel.org/centos/7/os/x86_64/RPM-GPG-KEY-CentOS-7
+
+
 ####### Every Product automatically gets a matchomg Content View. Composite Views are made up
 ####### of two or more Content Views.
 
         composite_views:
           SLIK:
             - Katello
-            - EPEL
+            - EPEL 7
             - CentOS 7
-          CentOS 7 - EPEL:
+            - Katello Client 7
+          CentOS 7 Client:
             - CentOS 7
             - EPEL
+            - Katello Client 7
 
 ####### Content Views are versioned and released/promoted to Lifecycle Environments.
 
