@@ -159,14 +159,37 @@ katello_answers:
     - template: jinja
     - onchanges: 
       - cmd: katello_clean_yum
+
 #Fix for http://projects.theforeman.org/issues/20055
 /opt/theforeman/tfm/root/usr/share/gems/gems/foreman_salt-8.0.2/db/seeds.d/75-salt_seeds.rb:
   file.managed:
-    - source: salt://katello/files/75-salt_seeds.rb
+    - source: salt://katello/files/monkey-patching/75-salt_seeds.rb
     - require:
        - pkg: katello_server_pkgs 
     - onchanges: 
       - cmd: katello_clean_yum
+/opt/theforeman/tfm/root/usr/share/gems/gems/katello-3.5.0.1/app/models/katello/repository.rb:
+  file.managed:
+    - source: salt://katello/files/monkey-patching/repository.rb
+    - require:
+       - pkg: katello_server_pkgs 
+    - onchanges: 
+      - cmd: katello_clean_yum
+/opt/theforeman/tfm/root/usr/share/gems/gems/katello-3.5.0.1/app/lib/actions/katello/repository/sync_hook.rb:
+  file.managed:
+    - source: salt://katello/files/monkey-patching/sync_hook.rb
+    - require:
+       - pkg: katello_server_pkgs 
+    - onchanges: 
+      - cmd: katello_clean_yum
+/opt/theforeman/tfm/root/usr/share/gems/gems/katello-3.5.0.1/app/lib/actions/katello/repository/sync.rb:
+  file.managed:
+    - source: salt://katello/files/monkey-patching/sync.rb
+    - require:
+       - pkg: katello_server_pkgs 
+    - onchanges: 
+      - cmd: katello_clean_yum
+
 katello_install:
   cmd.run:
 {%- if grains.get('current_tty', None) == None %}
@@ -190,31 +213,137 @@ katello_reset_pass:
       - firewalld: public
     - onchanges:
       - cmd: katello_clean_yum
-katello_prep_client_attachments_7:
-  cmd.run:
-    - name: curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/$( curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/ | grep subscription-manager-[1-9] | awk -f\" '{print $2}' ) -o /var/www/html/pub/subscription-manager.el7.centos.x86_64.rpm
+
+katello_create_bootstraping:
+  file.directory
+    - name: /var/www/html/pub/bootstrap
+    - user: apache
+    - group: apache
+    - dir_mode: 755
     - require:
       - cmd: katello_install
     - onchanges:
       - cmd: katello_clean_yum
-katello_prep_client_attachments_7:
+katello_create_bootstraping_7:
+  file.directory
+    - name: /var/www/html/pub/bootstrap/el7
+    - user: apache
+    - group: apache
+    - dir_mode: 755
+    - require:
+      - cmd: katello_install
+      - file: katello_create_bootstraping
+    - onchanges:
+      - cmd: katello_clean_yum
+katello_create_bootstraping_6:
+  file.directory
+    - name: /var/www/html/pub/bootstrap/el6
+    - user: apache
+    - group: apache
+    - dir_mode: 755
+    - require:
+      - cmd: katello_install
+      - file: katello_create_bootstraping
+    - onchanges:
+      - cmd: katello_clean_yum
+katello_prep_client_attachments_7_sub_mgr:
+  cmd.run:
+    - name: curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/$( curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/ | grep subscription-manager-[1-9] | awk -f\" '{print $2}' ) -O
+    - cwd: /var/www/html/pub/bootstrap/el7
+    - require:
+      - cmd: katello_install
+      - file: katello_create_bootstraping_7
+    - onchanges:
+      - cmd: katello_clean_yum
+katello_prep_client_attachments_7_python-rhsm:
+  cmd.run:
+    - name: curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/$( curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/ | grep python-rhsm-[1-9] | awk -f\" '{print $2}' ) -O
+    - cwd: /var/www/html/pub/bootstrap/el7
+    - require:
+      - cmd: katello_install
+      - file: katello_create_bootstraping_7
+    - onchanges:
+      - cmd: katello_clean_yum
+katello_prep_client_attachments_7_python-rhsm-certificates:
+  cmd.run:
+    - name: curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/$( curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/ | grep python-rhsm-certificates-[1-9] | awk -f\" '{print $2}' ) -O
+    - cwd: /var/www/html/pub/bootstrap/el7
+    - require:
+      - cmd: katello_install
+      - file: katello_create_bootstraping_7
+    - onchanges:
+      - cmd: katello_clean_yum
+katello_symlink_consumer_el7:
+  file.symlink:
+    - name: /var/www/html/pub/bootstrap/el7/katello-ca-consumer-latest.noarch.rpm
+    - target: /var/www/html/pub/katello-ca-consumer-latest.noarch.rpm 
+    - require:
+      - cmd: katello_install
+      - file: katello_create_bootstraping_7
+    - onchanges:
+      - cmd: katello_clean_yum
+katello_createrepo_7:
+  cmd.run:
+    - name: createrepo /var/www/html/pub/bootstrap/el7
+    - require:
+      - cmd: katello_install
+      - cmd: katello_prep_client_attachments_7_python-rhsm-certificates
+      - cmd: katello_prep_client_attachments_7_python-rhsm
+      - cmd: katello_prep_client_attachments_7_sub_mgr
+      - file: katello_symlink_consumer_el7
+    - onchanges:
+      - cmd: katello_clean_yum
+
+katello_prep_client_attachments_6:
   cmd.run:
 #pinning to such a specific version is suboptimal. Such is life.
-    - name: curl -s https://copr-be.cloud.fedoraproject.org/results/dgoodwin/subscription-manager/epel-6-x86_64/00273890-subscription-manager/subscription-manager-1.17.6-1.el6.x86_64.rpm -o /var/www/html/pub/subscription-manager.el6.centos.x86_64.rpm
+    - name: curl -s https://copr-be.cloud.fedoraproject.org/results/dgoodwin/subscription-manager/epel-6-x86_64/00273890-subscription-manager/subscription-manager-1.17.6-1.el6.x86_64.rpm -O
+    - cwd: /var/www/html/pub/bootstrap/el6
     - require:
       - cmd: katello_install
     - onchanges:
       - cmd: katello_clean_yum
-mkdir -p /etc/slik:
-  cmd.run:
+katello_symlink_consumer_el6:
+  file.symlink:
+    - name: /var/www/html/pub/bootstrap/el6/katello-ca-consumer-latest.noarch.rpm
+    - target: /var/www/html/pub/katello-ca-consumer-latest.noarch.rpm 
     - require:
-      - cmd: katello_reset_pass 
+      - cmd: katello_install
+      - file: katello_create_bootstraping_6
+    - onchanges:
+      - cmd: katello_clean_yum
+katello_createrepo_6:
+  cmd.run:
+    - name: createrepo /var/www/html/pub/bootstrap/el6
+    - require:
+      - cmd: katello_install
+      - cmd: katello_prep_client_attachments_6
+      - file: katello_symlink_consumer_el6
+    - onchanges:
+      - cmd: katello_clean_yum
+
+fix_foreman_hooks:
+# see http://projects.theforeman.org/issues/22070
+  cmd.run:
+    - name: mkdir -p /opt/theforeman/tfm/root/usr/share/gems/gems/katello-3.5.0.1/app/views/api/v2/katello
+    - require:
+      - cmd: katello_install
+    - onchanges:
+      - cmd: katello_clean_yum
+
+install_complete:
+  file.directory:
+    - name: /etc/slik
+    - require:
+      - cmd: katello_reset_pass
+      - cmd: katello_createrepo_6
+      - cmd: katello_createrepo_7 
     - onchanges:
       - cmd: katello_clean_yum
 touch /etc/slik/installed:
   cmd.run:
     - require:
-      - cmd: mkdir -p /etc/slik
+      - file: install_complete
     - onchanges:
       - cmd: katello_clean_yum
 httpd:

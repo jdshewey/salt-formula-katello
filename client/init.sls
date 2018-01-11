@@ -1,18 +1,29 @@
 {%- from "katello/map.jinja" import client with context %}
+katello_setup_bootstrap_repo:
+  pkgrepo.managed:
+    - name: bootstrapping
+    - humanname: Katello bootstrapping repo
+    - gpgcheck: 0
+    - sslverify: 0
+    - onlyif:
+      - test -z "$( rpm -qa | grep 'katello-ca-consumer-')"
 katello_consumer_install:
   pkg.installed:
-    - sources:
-#Located at /var/www/html/pub/
-      - katello-ca-consumer-{{ grains.master }}: http://{{ grains.master }}/pub/katello-ca-consumer-latest.noarch.rpm
-{%- if grains['osmajorrelease'] == 7 %}
-      - subscription-manager: http://{{ grains.master }}/pub/subscription-manager.el7.centos.x86_64.rpm
-{%- else %}
-      - subscription-manager: http://{{ grains.master }}/pub/subscription-manager.el6.centos.x86_64.rpm
-{%- endif %}
-    - allow_updates: True
+    - name: katello-ca-consumer-{{ grains.master }}
+    - require:
+      - pkgrepo: katello_setup_bootstrap_repo
+    - onchanges:
+      - pkgrepo: katello_setup_bootstrap_repo
 katello_clean_subscriptions:
   cmd.run:
     - name: subscription-manager clean
+    - require:
+      - pkg: katello_consumer_install
+    - onchanges:
+      - pkg: katello_consumer_install
+katello_clean_subscriptions_more_cleaner:
+  cmd.run:
+    - name: rm -rf /etc/yum.repos.d/*
     - require:
       - pkg: katello_consumer_install
     - onchanges:
@@ -30,18 +41,15 @@ katello_activate_client_{{ company_name }}:
     - require:
       - pkg: katello_consumer_install
       - cmd: katello_clean_subscriptions
+      - cmd: katello_clean_subscriptions_more_cleaner
     - onchanges:
       - pkg: katello_consumer_install
+    - require_in:
+      - pkg: katello_agent_install
 katello_agent_install:
   pkg.latest:
     - name: katello-agent 
-    - require:
-      - pkg: katello_consumer_install
-      - cmd: katello_clean_subscriptions
-      - cmd: katello_activate_client_{{ company_name }}
 {%- endfor %}
-    - onchanges:
-      - pkg: katello_consumer_install
 katello_update_host_info:
   cmd.run:
     - name: katello-tracer-upload

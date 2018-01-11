@@ -25,13 +25,13 @@ katello:
               gpg_key: https://yum.theforeman.org/RPM-GPG-KEY-foreman
             Katello:
               url: https://fedorapeople.org/groups/katello/releases/yum/latest/katello/el7/x86_64/
-              gpg_key: https://raw.githubusercontent.com/Katello/katello.org/master/gpg/RPM-GPG-KEY-katello-2015.gpg
+              gpg_key: https://raw.githubusercontent.com/jdshewey/salt-formula-katello/master/files/RPM-GPG-KEY-katello
             Candlepin:
               url: https://fedorapeople.org/groups/katello/releases/yum/latest/candlepin/el7/x86_64/
-              gpg_key: https://raw.githubusercontent.com/Katello/katello.org/master/gpg/RPM-GPG-KEY-katello-2015.gpg
+              gpg_key: https://raw.githubusercontent.com/jdshewey/salt-formula-katello/master/files/RPM-GPG-KEY-katello
             Pulp:
               url: https://fedorapeople.org/groups/katello/releases/yum/latest/pulp/el7/x86_64/
-              gpg_key: https://raw.githubusercontent.com/Katello/katello.org/master/gpg/RPM-GPG-KEY-katello-2015.gpg
+              gpg_key: https://raw.githubusercontent.com/jdshewey/salt-formula-katello/master/files/RPM-GPG-KEY-katello
             SaltStack:
               url: https://repo.saltstack.com/yum/redhat/7/x86_64/latest/
               gpg_key: https://repo.saltstack.com/yum/redhat/7/x86_64/latest/SALTSTACK-GPG-KEY.pub
@@ -41,7 +41,7 @@ katello:
           Katello Client 7:
             Katello Client 7:
               url: https://fedorapeople.org/groups/katello/releases/yum/latest/client/el7/x86_64/
-              gpg_key: https://raw.githubusercontent.com/Katello/katello.org/master/gpg/RPM-GPG-KEY-katello-2015.gpg
+              gpg_key: https://raw.githubusercontent.com/jdshewey/salt-formula-katello/master/files/RPM-GPG-KEY-katello
           EPEL 7:
             sync_plan: daily
             EPEL:
@@ -66,7 +66,8 @@ katello:
         composite_views:
           SLIK:
             - Katello
-            - EPEL
+            - Katello Client 7
+            - EPEL 7
             - CentOS 7
           CentOS 7 Client:
             - CentOS 7

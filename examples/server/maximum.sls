@@ -37,13 +37,13 @@ katello:
               gpg_key: https://yum.theforeman.org/RPM-GPG-KEY-foreman
             Katello:
               url: https://fedorapeople.org/groups/katello/releases/yum/latest/katello/el7/x86_64/
-              gpg_key: https://www.katello.org/gpg/RPM-GPG-KEY-katello-2015.gpg
+              gpg_key: https://raw.githubusercontent.com/jdshewey/salt-formula-katello/master/files/RPM-GPG-KEY-katello
             Candlepin:
               url: https://fedorapeople.org/groups/katello/releases/yum/latest/candlepin/el7/x86_64/
-              gpg_key: https://www.katello.org/gpg/RPM-GPG-KEY-katello-2015.gpg
+              gpg_key: https://raw.githubusercontent.com/jdshewey/salt-formula-katello/master/files/RPM-GPG-KEY-katello
             Pulp:
               url: https://fedorapeople.org/groups/katello/releases/yum/latest/pulp/el7/x86_64/
-              gpg_key: https://www.katello.org/gpg/RPM-GPG-KEY-katello-2015.gpg
+              gpg_key: https://raw.githubusercontent.com/jdshewey/salt-formula-katello/master/files/RPM-GPG-KEY-katello
             SaltStack:
               url: https://repo.saltstack.com/yum/redhat/7/x86_64/latest/
               gpg_key: https://repo.saltstack.com/yum/redhat/7/x86_64/latest/SALTSTACK-GPG-KEY.pub
@@ -53,7 +53,7 @@ katello:
           Katello Client 7:
             Katello Client 7:
               url: https://fedorapeople.org/groups/katello/releases/yum/latest/client/el7/x86_64/
-              gpg_key: https://www.katello.org/gpg/RPM-GPG-KEY-katello-2015.gpg
+              gpg_key: https://raw.githubusercontent.com/jdshewey/salt-formula-katello/master/files/RPM-GPG-KEY-katello
           EPEL 7:
             sync_plan: weekly
             EPEL:
@@ -74,7 +74,7 @@ katello:
           Katello Client 6:
             Katello Client 6:
               url: https://fedorapeople.org/groups/katello/releases/yum/latest/client/el6/x86_64/
-              gpg_key: https://www.katello.org/gpg/RPM-GPG-KEY-katello-2015.gpg
+              gpg_key: https://raw.githubusercontent.com/jdshewey/salt-formula-katello/master/files/RPM-GPG-KEY-katello
           EPEL 6:
             sync_plan: weekly
             EPEL:

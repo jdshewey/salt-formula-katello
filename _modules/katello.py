@@ -529,6 +529,7 @@ def create_repo(hostname, username, password,
                                                   'download_policy': download_policy,
                                                   'mirror_on_sync': mirror_on_sync,
                                                   'verify_ssl': verify_ssl,
+						  'unprotected': unprotected,
                                                   'gpg_key_id': gpg_id,}),
                                  headers={'Content-Type': 'application/json'},
                                  auth=HTTPBasicAuth(username, password))
