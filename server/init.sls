@@ -215,7 +215,7 @@ katello_reset_pass:
       - cmd: katello_clean_yum
 
 katello_create_bootstraping:
-  file.directory
+  file.directory:
     - name: /var/www/html/pub/bootstrap
     - user: apache
     - group: apache
@@ -225,7 +225,7 @@ katello_create_bootstraping:
     - onchanges:
       - cmd: katello_clean_yum
 katello_create_bootstraping_7:
-  file.directory
+  file.directory:
     - name: /var/www/html/pub/bootstrap/el7
     - user: apache
     - group: apache
@@ -236,7 +236,7 @@ katello_create_bootstraping_7:
     - onchanges:
       - cmd: katello_clean_yum
 katello_create_bootstraping_6:
-  file.directory
+  file.directory:
     - name: /var/www/html/pub/bootstrap/el6
     - user: apache
     - group: apache
