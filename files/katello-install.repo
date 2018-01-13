@@ -1,5 +1,5 @@
-{%- set foreman_beta = '1.16' %}
-{%- set katello_beta = '3.5' %}
+{%- set foreman_beta = '1.17' %}
+{%- set katello_beta = '3.6' %}
 {%- set katello_source = 'https://fedorapeople.org/groups/katello/releases/yum' %}
 
 [CentOS_7_base]

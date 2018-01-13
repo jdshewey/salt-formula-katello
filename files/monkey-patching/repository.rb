@@ -10,7 +10,7 @@ module Katello
     before_validation :update_ostree_upstream_sync_policy
 
     include ForemanTasks::Concerns::ActionSubject
-    include Glue::Candlepin::Repository
+    include Glue::Candlepin::Content if (SETTINGS[:katello][:use_cp] && SETTINGS[:katello][:use_pulp])
     include Glue::Pulp::Repo if SETTINGS[:katello][:use_pulp]
 
     include Glue if (SETTINGS[:katello][:use_cp] || SETTINGS[:katello][:use_pulp])
@@ -19,7 +19,6 @@ module Katello
     include Ext::LabelFromName
     include Katello::Engine.routes.url_helpers
 
-    DEB_TYPE = 'deb'.freeze
     YUM_TYPE = 'yum'.freeze
     FILE_TYPE = 'file'.freeze
     PUPPET_TYPE = 'puppet'.freeze
@@ -27,7 +26,7 @@ module Katello
     OSTREE_TYPE = 'ostree'.freeze
 
     CHECKSUM_TYPES = %w(sha1 sha256).freeze
-    SUBSCRIBABLE_TYPES = [YUM_TYPE, OSTREE_TYPE, DEB_TYPE].freeze
+    SUBSCRIBABLE_TYPES = [YUM_TYPE, OSTREE_TYPE].freeze
 
     OSTREE_UPSTREAM_SYNC_POLICY_LATEST = "latest".freeze
     OSTREE_UPSTREAM_SYNC_POLICY_ALL = "all".freeze
@@ -54,9 +53,6 @@ module Katello
     has_many :repository_rpms, :class_name => "Katello::RepositoryRpm", :dependent => :delete_all
     has_many :rpms, :through => :repository_rpms
 
-    has_many :repository_srpms, :class_name => "Katello::RepositorySrpm", :dependent => :delete_all
-    has_many :srpms, :through => :repository_srpms
-
     has_many :repository_files, :class_name => "Katello::RepositoryFile", :dependent => :destroy
     has_many :files, :through => :repository_files
 
@@ -66,18 +62,12 @@ module Katello
     has_many :repository_docker_manifests, :class_name => "Katello::RepositoryDockerManifest", :dependent => :delete_all
     has_many :docker_manifests, :through => :repository_docker_manifests
 
-    has_many :repository_docker_manifest_lists, :class_name => "Katello::RepositoryDockerManifestList", :dependent => :delete_all
-    has_many :docker_manifest_lists, :through => :repository_docker_manifest_lists
-
     has_many :docker_tags, :dependent => :destroy, :class_name => "Katello::DockerTag"
 
     has_many :docker_meta_tags, :dependent => :destroy, :class_name => "Katello::DockerMetaTag"
 
     has_many :repository_ostree_branches, :class_name => "Katello::RepositoryOstreeBranch", :dependent => :delete_all
     has_many :ostree_branches, :through => :repository_ostree_branches
-
-    has_many :repository_debs, :class_name => "Katello::RepositoryDeb", :dependent => :delete_all
-    has_many :debs, :through => :repository_debs
 
     has_many :content_facet_repositories, :class_name => "Katello::ContentFacetRepository", :dependent => :destroy
     has_many :content_facets, :through => :content_facet_repositories
@@ -138,8 +128,7 @@ module Katello
 
     scope :has_url, -> { where('url IS NOT NULL') }
     scope :in_default_view, -> { joins(:content_view_version => :content_view).where("#{Katello::ContentView.table_name}.default" => true) }
-    scope :in_non_default_view, -> { joins(:content_view_version => :content_view).where("#{Katello::ContentView.table_name}.default" => false) }
-    scope :deb_type, -> { where(:content_type => DEB_TYPE) }
+
     scope :yum_type, -> { where(:content_type => YUM_TYPE) }
     scope :file_type, -> { where(:content_type => FILE_TYPE) }
     scope :puppet_type, -> { where(:content_type => PUPPET_TYPE) }
@@ -149,7 +138,6 @@ module Katello
     scope :non_archived, -> { where('environment_id is not NULL') }
     scope :archived, -> { where('environment_id is NULL') }
     scope :subscribable, -> { where(content_type: SUBSCRIBABLE_TYPES) }
-    scope :in_published_environments, -> { in_content_views(Katello::ContentView.non_default).where.not(:environment_id => nil) }
 
     scoped_search :on => :name, :complete_value => true
     scoped_search :rename => :product, :on => :name, :relation => :product, :complete_value => true
@@ -163,7 +151,6 @@ module Katello
     scoped_search :on => :distribution_variant, :complete_value => true
     scoped_search :on => :distribution_bootable, :complete_value => true
     scoped_search :on => :distribution_uuid, :complete_value => true
-    scoped_search :on => :ignore_global_proxy, :complete_value => true
 
     def organization
       if self.environment
@@ -203,16 +190,6 @@ module Katello
 
     def content_view
       self.content_view_version.content_view
-    end
-
-    def self.undisplayable_types
-      ret = [::Katello::Repository::CANDLEPIN_DOCKER_TYPE]
-
-      unless ::Katello::RepositoryTypeManager.enabled?(Repository::OSTREE_TYPE)
-        ret << ::Katello::Repository::CANDLEPIN_OSTREE_TYPE
-      end
-
-      ret
     end
 
     def self.in_organization(org)
@@ -312,7 +289,7 @@ module Katello
 
     def group
       library_repo = library_instance? ? self : library_instance
-      clones.to_a << library_repo
+      clones << library_repo
     end
 
     #is the repo cloned in the specified environment
@@ -515,18 +492,6 @@ module Katello
       search.in_content_views([view])
     end
 
-    def archived_instance
-      if self.environment_id.nil? || self.library_instance_id.nil?
-        self
-      else
-        self.content_view_version.archived_repos.where(:library_instance_id => self.library_instance_id).first
-      end
-    end
-
-    def requires_yum_clone_distributor?
-      self.yum? && self.environment_id && !self.in_default_view?
-    end
-
     def url?
       url.present?
     end
@@ -552,7 +517,7 @@ module Katello
     end
 
     def exist_for_environment?(environment, content_view, attribute = nil)
-      if environment.present? && content_view.in_environment?(environment)
+      if environment.present?
         repos = content_view.version(environment).repos(environment)
 
         repos.any? do |repo|
@@ -657,30 +622,9 @@ module Katello
         self.ostree_branches -= units
       elsif file?
         self.files -= units
-      elsif deb?
-        self.debs -= units
       elsif docker?
         remove_docker_content(units)
       end
-    end
-
-    # deleteable? is already taken by the authorization mixin
-    def destroyable?
-      if self.environment.try(:library?) && self.content_view.default?
-        if self.environment.organization.being_deleted?
-          return true
-        elsif self.custom? && self.deletable?
-          return true
-        elsif !self.custom? && self.redhat_deletable?
-          return true
-        else
-          errors.add(:base, _("Repository cannot be deleted since it has already been included in a published Content View. " \
-                              "Please delete all Content View versions containing this repository before attempting to delete it."))
-
-          return false
-        end
-      end
-      return true
     end
 
     def sync_hook
@@ -695,7 +639,20 @@ module Katello
     end
 
     def assert_deletable
-      throw :abort unless destroyable?
+      if self.environment.try(:library?) && self.content_view.default?
+        if self.environment.organization.being_deleted?
+          return true
+        elsif self.custom? && self.deletable?
+          return true
+        elsif !self.custom? && self.redhat_deletable?
+          return true
+        else
+          errors.add(:base, _("Repository cannot be deleted since it has already been included in a published Content View. " \
+                              "Please delete all Content View versions containing this repository before attempting to delete it."))
+
+          return false
+        end
+      end
     end
 
     def hosts_with_applicability
@@ -704,52 +661,6 @@ module Katello
 
     def docker_meta_tag_count
       DockerMetaTag.in_repositories(self.id).count
-    end
-
-    # a master repository actually has content (rpms, errata, etc) in the pulp repository.  For these repositories, we can use the YumDistributor
-    # to generate metadata and can index the content from pulp, or for the case of content view archives without filters, can also use the YumCloneDistributor
-    #
-    def master?
-      !self.yum? || # non-yum repos
-          self.in_default_view? || # default content view repos
-          (self.archive? && !self.content_view.composite) || # non-composite content view archive repos
-          (self.content_view.composite? && self.component_source_repositories.count > 1) # composite archive repo with more than 1 source repository
-    end
-
-    # a link repository has no content in the pulp repository and serves as a shell.  It will always be empty.  Only the YumCloneDistributor can be used
-    # to publish yum metadata, and it cannot be indexed from pulp, but must have its indexed associations copied from another repository (its target).
-    def link?
-      !master?
-    end
-
-    # A link (empty repo) points to a target (a repository that actually has units in pulp).  Target repos are always archive repos of a content view version (a repo with no environment)
-    # But for composite view versions, an archive repo, usually won't be a master (but might be if multple components contain the same repo)
-    def target_repository
-      fail _("This is not a linked repository") if master?
-      return nil if self.archived_instance.nil?
-
-      #this is an environment repo, and the archived_instance is a master (not always true with composite)
-      if self.environment_id? && self.archived_instance.master?
-        self.archived_instance
-      elsif self.environment_id #this is an environment repo, but a composite who's archived_instance isn't a master
-        self.archived_instance.target_repository || self.archived_instance #to archived_instance if nil
-      else #must be a composite archive repo, with only one component repo
-        self.component_source_repositories.first
-      end
-    end
-
-    def component_source_repositories
-      #find other copies of this repositories, in the CV version's components, that are in the 'archive'
-      Katello::Repository.where(:content_view_version_id => self.content_view_version.components, :environment_id => nil,
-                                :library_instance_id => self.library_instance_id)
-    end
-
-    def self.linked_repositories
-      to_return = []
-      Katello::Repository.yum_type.in_non_default_view.find_each do |repo|
-        to_return << repo if repo.link?
-      end
-      to_return
     end
 
     protected
@@ -765,8 +676,6 @@ module Katello
         self.ostree_branches
       elsif file?
         self.files
-      elsif deb?
-        self.debs
       else
         fail "Content type not supported for removal"
       end
@@ -811,15 +720,14 @@ module Katello
     end
 
     def remove_docker_content(manifests)
-      destroyable_manifests = manifests.select do |manifest|
-        manifest.repositories.empty? || manifest.docker_manifest_lists.empty?
-      end
-      # destroy any orphan docker manifests
-      destroyable_manifests.each do |manifest|
-        self.docker_manifests.delete(manifest)
-        manifest.destroy
-      end
+      self.docker_tags.where(:docker_manifest_id => manifests.map(&:id)).destroy_all
       DockerMetaTag.cleanup_tags
+      self.docker_manifests -= manifests
+
+      # destroy any orphan docker manifests
+      manifests.each do |manifest|
+        manifest.destroy if manifest.repositories.empty?
+      end
     end
 
     def update_ostree_upstream_sync_policy

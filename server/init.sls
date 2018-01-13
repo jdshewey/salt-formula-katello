@@ -160,6 +160,7 @@ katello_answers:
     - onchanges: 
       - cmd: katello_clean_yum
 
+{%- if server.nightly is not defined and server.rc is not defined %}
 #Fix for http://projects.theforeman.org/issues/20055
 /opt/theforeman/tfm/root/usr/share/gems/gems/foreman_salt-8.0.2/db/seeds.d/75-salt_seeds.rb:
   file.managed:
@@ -168,6 +169,7 @@ katello_answers:
        - pkg: katello_server_pkgs 
     - onchanges: 
       - cmd: katello_clean_yum
+#Fix for http://projects.theforeman.org/issues/22206
 /opt/theforeman/tfm/root/usr/share/gems/gems/katello-3.5.0.1/app/models/katello/repository.rb:
   file.managed:
     - source: salt://katello/files/monkey-patching/repository.rb
@@ -189,6 +191,15 @@ katello_answers:
        - pkg: katello_server_pkgs 
     - onchanges: 
       - cmd: katello_clean_yum
+#Fix for http://projects.theforeman.org/issues/22070
+/opt/theforeman/tfm/root/usr/share/gems/gems/foreman_hooks-0.3.14/lib/foreman_hooks/util.rb:
+  file.managed:
+    - source: salt://katello/files/monkey-patching/sync.rb
+    - require:
+       - pkg: katello_server_pkgs 
+    - onchanges: 
+      - cmd: katello_clean_yum
+{%- endif %}
 
 katello_install:
   cmd.run:
@@ -248,7 +259,7 @@ katello_create_bootstraping_6:
       - cmd: katello_clean_yum
 katello_prep_client_attachments_7_sub_mgr:
   cmd.run:
-    - name: curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/$( curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/ | grep subscription-manager-[1-9] | awk -f\" '{print $2}' ) -O
+    - name: curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/$( curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/ | grep subscription-manager-[1-9] | awk -F\" '{print $2}' ) -O
     - cwd: /var/www/html/pub/bootstrap/el7
     - require:
       - cmd: katello_install
@@ -257,7 +268,7 @@ katello_prep_client_attachments_7_sub_mgr:
       - cmd: katello_clean_yum
 katello_prep_client_attachments_7_python-rhsm:
   cmd.run:
-    - name: curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/$( curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/ | grep python-rhsm-[1-9] | awk -f\" '{print $2}' ) -O
+    - name: curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/$( curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/ | grep python-rhsm-[1-9] | awk -F\" '{print $2}' ) -O
     - cwd: /var/www/html/pub/bootstrap/el7
     - require:
       - cmd: katello_install
@@ -266,7 +277,7 @@ katello_prep_client_attachments_7_python-rhsm:
       - cmd: katello_clean_yum
 katello_prep_client_attachments_7_python-rhsm-certificates:
   cmd.run:
-    - name: curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/$( curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/ | grep python-rhsm-certificates-[1-9] | awk -f\" '{print $2}' ) -O
+    - name: curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/$( curl -s https://mirrors.kernel.org/centos/7/updates/x86_64/Packages/ | grep python-rhsm-certificates-[1-9] | awk -F\" '{print $2}' ) -O
     - cwd: /var/www/html/pub/bootstrap/el7
     - require:
       - cmd: katello_install
@@ -319,15 +330,6 @@ katello_createrepo_6:
       - cmd: katello_install
       - cmd: katello_prep_client_attachments_6
       - file: katello_symlink_consumer_el6
-    - onchanges:
-      - cmd: katello_clean_yum
-
-fix_foreman_hooks:
-# see http://projects.theforeman.org/issues/22070
-  cmd.run:
-    - name: mkdir -p /opt/theforeman/tfm/root/usr/share/gems/gems/katello-3.5.0.1/app/views/api/v2/katello
-    - require:
-      - cmd: katello_install
     - onchanges:
       - cmd: katello_clean_yum
 
