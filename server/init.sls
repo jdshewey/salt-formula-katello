@@ -169,6 +169,25 @@ katello_answers:
        - pkg: katello_server_pkgs 
     - onchanges: 
       - cmd: katello_clean_yum
+{%- endif %}
+
+katello_install:
+  cmd.run:
+{%- if grains.get('current_tty', None) == None %}
+    - name: foreman-installer --scenario katello
+{%- else %}
+    - name: /bin/bash -c "foreman-installer --scenario katello &> >(tee {{ grains['current_tty'] }})"
+{%- endif %}
+    - require:
+      - file: katello_answers
+      - file: katello_sources
+      - pkg: katello_server_pkgs
+    - env:
+      - LC_CTYPE: en_US.UTF-8
+    - onchanges:
+      - cmd: katello_clean_yum
+
+{%- if server.nightly is not defined and server.rc is not defined %}
 #Fix for http://projects.theforeman.org/issues/22206
 /opt/theforeman/tfm/root/usr/share/gems/gems/katello-3.5.0.1/app/models/katello/repository.rb:
   file.managed:
@@ -200,30 +219,6 @@ katello_answers:
     - onchanges: 
       - cmd: katello_clean_yum
 {%- endif %}
-
-katello_install:
-  cmd.run:
-{%- if grains.get('current_tty', None) == None %}
-    - name: foreman-installer --scenario katello
-{%- else %}
-    - name: /bin/bash -c "foreman-installer --scenario katello &> >(tee {{ grains['current_tty'] }})"
-{%- endif %}
-    - require:
-      - file: katello_answers
-      - file: katello_sources
-      - pkg: katello_server_pkgs
-    - env:
-      - LC_CTYPE: en_US.UTF-8
-    - onchanges:
-      - cmd: katello_clean_yum
-katello_reset_pass:
-  cmd.run:
-    - name: /bin/bash -c $'PASSWORD=$( foreman-rake permissions:reset 2> /dev/null | awk "{printf \$6}" ); curl -s -k -X PUT -u admin:$PASSWORD -H "Content-Type:application/json" -H "Accept:application/json" -d "{\\\"login\\\":\\\"admin\\\", \\\"current_password\\\":\\\"$PASSWORD\\\", \\\"password\\\":\\\"{{ server.admin_pass }}\\\"}" https://{{ grains['fqdn'] }}/api/v2/users/admin'
-    - require:
-      - cmd: katello_install
-      - firewalld: public
-    - onchanges:
-      - cmd: katello_clean_yum
 
 katello_create_bootstraping:
   file.directory:
@@ -337,7 +332,6 @@ install_complete:
   file.directory:
     - name: /etc/slik
     - require:
-      - cmd: katello_reset_pass
       - cmd: katello_createrepo_6
       - cmd: katello_createrepo_7 
     - onchanges:
