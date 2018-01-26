@@ -3,6 +3,7 @@ katello_setup_bootstrap_repo:
   pkgrepo.managed:
     - name: bootstrapping
     - humanname: Katello bootstrapping repo
+    - baseurl: https://{{ grains['master'] }}/pub/bootstrap/el{{ grains['u1devsat01v'] }}/
     - gpgcheck: 0
     - sslverify: 0
     - onlyif:
@@ -50,11 +51,13 @@ katello_agent_install:
   pkg.latest:
     - name: katello-agent 
 {%- endfor %}
+{%- if grains['osmajorrelease'] != 6 %}
 katello_update_host_info:
   cmd.run:
     - name: katello-tracer-upload
     - require:
       - pkg: katello_agent_install
+{%- endif %}
 katello_gofer:
   service.running:
     - name: goferd

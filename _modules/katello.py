@@ -381,11 +381,20 @@ def load_gpg_key(hostname, username, password, organization, key_url):
     #                                       assert_hostname=False)
     #    connection.mount('https://', HostNameIgnoringAdapter())
 
-    response = requests.get(key_url)
-    data = _load_response(response)
+    if key_url.startswith("http"):
+        response = requests.get(key_url)
+        data = _load_response(response)
 
-    if data['code'] != 200:
-        raise ValueError(str(data['code']) + ": " + json.dumps(data['content']))
+        if data['code'] != 200:
+            raise ValueError(str(data['code']) + ": " + json.dumps(data['content']))
+
+    else:
+        try:
+            with open(key_url, 'r') as f:
+                data = { 'content':f.read() }
+            f.closed
+        except IOError as error:
+            raise ValueError("Could not open file: " + str(error))
 
     response = requests.post('https://' + hostname +
                              '/katello/api/gpg_keys',

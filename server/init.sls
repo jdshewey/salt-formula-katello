@@ -213,7 +213,7 @@ katello_install:
 #Fix for http://projects.theforeman.org/issues/22070
 /opt/theforeman/tfm/root/usr/share/gems/gems/foreman_hooks-0.3.14/lib/foreman_hooks/util.rb:
   file.managed:
-    - source: salt://katello/files/monkey-patching/sync.rb
+    - source: salt://katello/files/monkey-patching/util.rb
     - require:
        - pkg: katello_server_pkgs 
     - onchanges: 
@@ -309,6 +309,15 @@ katello_prep_client_attachments_6:
       - cmd: katello_install
     - onchanges:
       - cmd: katello_clean_yum
+katello_prep_client_attachments_6_2:
+  cmd.run:
+#pinning to such a specific version is suboptimal. Such is life.
+    - name: curl -s https://copr-be.cloud.fedoraproject.org/results/dgoodwin/subscription-manager/epel-6-x86_64/00273833-python-rhsm/python-rhsm-1.17.2-1.el6.x86_64.rpm -O
+    - cwd: /var/www/html/pub/bootstrap/el6
+    - require:
+      - cmd: katello_install
+    - onchanges:
+      - cmd: katello_clean_yum
 katello_symlink_consumer_el6:
   file.symlink:
     - name: /var/www/html/pub/bootstrap/el6/katello-ca-consumer-latest.noarch.rpm
@@ -324,7 +333,17 @@ katello_createrepo_6:
     - require:
       - cmd: katello_install
       - cmd: katello_prep_client_attachments_6
+      - cmd: katello_prep_client_attachments_6_2
       - file: katello_symlink_consumer_el6
+    - onchanges:
+      - cmd: katello_clean_yum
+
+katello_configure_hooks:
+  file.symlink:
+    - name: /usr/share/foreman/config/hooks/katello
+    - target: /srv/salt/katello/hooks/katello
+    - require:
+      - cmd: katello_install
     - onchanges:
       - cmd: katello_clean_yum
 
@@ -332,6 +351,7 @@ install_complete:
   file.directory:
     - name: /etc/slik
     - require:
+      - file: katello_configure_hooks
       - cmd: katello_createrepo_6
       - cmd: katello_createrepo_7 
     - onchanges:

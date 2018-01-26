@@ -37,7 +37,7 @@ katello:
               gpg_key: https://yum.theforeman.org/RPM-GPG-KEY-foreman
             Katello:
               url: https://fedorapeople.org/groups/katello/releases/yum/latest/katello/el7/x86_64/
-              gpg_key: https://raw.githubusercontent.com/jdshewey/salt-formula-katello/master/files/RPM-GPG-KEY-katello
+              gpg_key: /srv/salt/katello/files/RPM-GPG-KEY-katello
             Candlepin:
               url: https://fedorapeople.org/groups/katello/releases/yum/latest/candlepin/el7/x86_64/
               gpg_key: https://raw.githubusercontent.com/jdshewey/salt-formula-katello/master/files/RPM-GPG-KEY-katello
@@ -49,11 +49,11 @@ katello:
               gpg_key: https://repo.saltstack.com/yum/redhat/7/x86_64/latest/SALTSTACK-GPG-KEY.pub
             Puppet:
               url: https://yum.puppetlabs.com/el/7/PC1/x86_64/
-              gpg_key: https://yum.puppetlabs.com/RPM-GPG-KEY-puppet\
+              gpg_key: https://yum.puppetlabs.com/RPM-GPG-KEY-puppet
           Katello Client 7:
             Katello Client 7:
               url: https://fedorapeople.org/groups/katello/releases/yum/latest/client/el7/x86_64/
-              gpg_key: https://raw.githubusercontent.com/jdshewey/salt-formula-katello/master/files/RPM-GPG-KEY-katello
+              gpg_key: /srv/salt/katello/files/RPM-GPG-KEY-katello
           EPEL 7:
             sync_plan: weekly
             EPEL:
