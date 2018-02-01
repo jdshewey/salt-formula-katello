@@ -3,7 +3,7 @@ katello_setup_bootstrap_repo:
   pkgrepo.managed:
     - name: bootstrapping
     - humanname: Katello bootstrapping repo
-    - baseurl: https://{{ grains['master'] }}/pub/bootstrap/el{{ grains['u1devsat01v'] }}/
+    - baseurl: https://{{ grains['master'] }}/pub/bootstrap/el{{ grains['fqdn'] }}/
     - gpgcheck: 0
     - sslverify: 0
     - onlyif:
