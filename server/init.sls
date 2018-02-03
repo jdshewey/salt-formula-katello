@@ -362,9 +362,13 @@ touch /etc/slik/installed:
       - file: install_complete
     - onchanges:
       - cmd: katello_clean_yum
+    - require_in:
+      - pkgrepo: katello_setup_bootstrap_repo
 httpd:
   service.running:
     - enable: true
+    - require_in:
+      - pkgrepo: katello_setup_bootstrap_repo 
 katello_firewalld:
   firewalld.present:
     - name: public
@@ -374,6 +378,8 @@ katello_firewalld:
       - saltstack
       - ssh
       - dhcpv6-client
+    - require_in:
+      - pkgrepo: katello_setup_bootstrap_repo 
 
 ##################################################
 #
